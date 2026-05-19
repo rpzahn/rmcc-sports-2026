@@ -1,0 +1,11 @@
+# Local-only schedule reference — never commit
+2026 RMCC Daily Schedule.pdf
+*.pdf
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~

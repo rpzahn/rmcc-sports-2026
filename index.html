@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RMCC Sports">
+<title>RMCC 2026 Sports Scheduler</title>
+<style>
+:root {
+  --vb: #ff8a00;
+  --hk: #0a84ff;
+  --sb: #34c759;
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --ink: #111827;
+  --ink-dim: #6b7280;
+  --line: #e5e7eb;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --good: #059669;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; font-size: 16px; }
+body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+
+header {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 16px 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+header h1 { margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: var(--ink); }
+nav { display: flex; gap: 4px; }
+.tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 12px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  min-height: 48px;
+}
+.tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+main { padding: 12px; max-width: 1400px; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* ===== Slot view ===== */
+.slot-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.slot-nav-btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 22px;
+  min-width: 56px;
+  min-height: 56px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+.slot-nav-btn:disabled { opacity: 0.35; }
+.slot-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+.slot-title .sub { display: block; font-size: 13px; color: var(--ink-dim); font-weight: 500; margin-top: 2px; }
+.slot-select {
+  min-height: 56px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 0 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.excluded-bar {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.excluded-bar .label { font-size: 13px; font-weight: 600; color: var(--ink-dim); }
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+}
+.team-chip.elim { background: #fee2e2; color: #991b1b; }
+.excl-btn {
+  margin-left: auto;
+  background: var(--ink);
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 40px;
+}
+
+.sport-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .sport-row { grid-template-columns: 1fr; } }
+
+.sport-card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.sport-card .stripe { position: absolute; top: 0; left: 0; right: 0; height: 6px; }
+.sport-card.vb .stripe { background: var(--vb); }
+.sport-card.hk .stripe { background: var(--hk); }
+.sport-card.sb .stripe { background: var(--sb); }
+.sport-card .name { font-size: 18px; font-weight: 700; margin: 4px 0 2px 0; display: flex; align-items: center; gap: 10px; }
+.sport-icon { width: 28px; height: 28px; flex-shrink: 0; }
+.sport-icon-sm { width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; }
+.sport-card.vb .sport-icon { color: var(--vb); }
+.sport-card.hk .sport-icon { color: var(--hk); }
+.sport-card.sb .sport-icon { color: var(--sb); }
+.bracket-tab[data-sport="VB"] .sport-icon-sm { color: var(--vb); }
+.bracket-tab[data-sport="HK"] .sport-icon-sm { color: var(--hk); }
+.bracket-tab[data-sport="SB"] .sport-icon-sm { color: var(--sb); }
+.bracket-tab.active .sport-icon-sm { color: white; }
+.sport-card .match-label { font-size: 12px; color: var(--ink-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
+.sport-card .match-label.filler { color: var(--warn); }
+.sport-card .match-label.bye { color: var(--danger); }
+
+.team-btn {
+  display: block;
+  width: 100%;
+  padding: 16px 12px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  margin-bottom: 8px;
+  min-height: 60px;
+  cursor: pointer;
+  text-align: center;
+}
+.team-btn.elim-team { color: var(--ink-dim); }
+.team-btn .elim-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--danger); }
+.team-btn.winner { background: var(--good); color: white; border-color: var(--good); }
+.team-btn.loser { opacity: 0.4; }
+.sport-card.vb .team-btn:not(.winner):not(.loser):active { border-color: var(--vb); }
+.sport-card.hk .team-btn:not(.winner):not(.loser):active { border-color: var(--hk); }
+.sport-card.sb .team-btn:not(.winner):not(.loser):active { border-color: var(--sb); }
+.vs { text-align: center; color: var(--ink-dim); font-size: 13px; font-weight: 600; margin: 4px 0; }
+
+.card-actions { display: flex; gap: 8px; margin-top: 10px; }
+.card-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  min-height: 40px;
+}
+.card-actions button.danger { color: var(--danger); border-color: #fecaca; }
+
+.bye-card { text-align: center; padding: 40px 20px; color: var(--ink-dim); }
+.bye-card .big { font-size: 22px; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
+
+/* ===== Modal ===== */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal h2 { margin: 0 0 12px 0; font-size: 18px; }
+.modal .body { margin-bottom: 16px; color: var(--ink); }
+.modal .actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal button {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 48px;
+  cursor: pointer;
+}
+.modal button.primary { background: var(--ink); color: white; border-color: var(--ink); }
+.modal button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+
+.team-toggle-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0; }
+.team-toggle {
+  padding: 14px 8px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 56px;
+}
+.team-toggle.on { background: var(--warn); color: white; border-color: var(--warn); }
+.team-toggle:disabled { opacity: 0.35; }
+.team-toggle small { display: block; font-size: 10px; font-weight: 500; margin-top: 2px; opacity: 0.8; }
+
+/* ===== Bracket view ===== */
+.bracket-tabs { display: flex; gap: 4px; margin-bottom: 12px; background: var(--card); padding: 4px; border-radius: 12px; }
+.bracket-tab {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  min-height: 44px;
+}
+.bracket-tab.active { background: var(--ink); color: white; }
+
+.bracket-section { margin-bottom: 18px; }
+.bracket-section h3 { font-size: 15px; margin: 0 0 8px 0; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.bracket-rounds { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; position: relative; }
+.bracket-round { min-width: 180px; flex-shrink: 0; position: relative; z-index: 1; }
+.bracket-round h4 { font-size: 12px; margin: 0 0 6px 0; color: var(--ink-dim); font-weight: 600; }
+.bracket-match {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  position: relative;
+  z-index: 1;
+}
+.bracket-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.bracket-line { fill: none; stroke: var(--ink-dim); stroke-width: 1.5; opacity: 0.45; }
+.bracket-line.winner-decided { stroke: var(--good); opacity: 0.7; }
+.bracket-match .id { font-size: 10px; color: var(--ink-dim); font-weight: 600; margin-bottom: 2px; }
+.bracket-match .team { padding: 4px 6px; border-radius: 4px; font-weight: 600; display: flex; justify-content: space-between; }
+.bracket-match .team.winner { background: #d1fae5; color: var(--good); }
+.bracket-match .team.loser { color: var(--ink-dim); text-decoration: line-through; }
+.bracket-match .team.tbd { color: var(--ink-dim); font-style: italic; }
+
+.champion-banner {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+/* ===== Settings view ===== */
+.settings-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+}
+.settings-section h2 { margin: 0 0 8px 0; font-size: 16px; }
+.settings-section p { margin: 0 0 12px 0; color: var(--ink-dim); font-size: 14px; }
+.settings-section button {
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+.settings-section button.danger { color: var(--danger); border-color: #fecaca; }
+
+.first-run {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px solid var(--line);
+}
+.first-run h2 { font-size: 22px; margin: 0 0 12px 0; }
+.first-run p { color: var(--ink-dim); margin: 0 0 20px 0; }
+.first-run button {
+  background: var(--ink);
+  color: white;
+  border: none;
+  padding: 16px 28px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  min-height: 60px;
+  cursor: pointer;
+}
+
+/* ===== Standings view ===== */
+.standings-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+}
+.standings-section h2 { margin: 0 0 10px 0; font-size: 16px; }
+.standings-section p.hint { margin: 0 0 10px 0; color: var(--ink-dim); font-size: 13px; }
+.standings-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.standings-table th, .standings-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.standings-table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  font-weight: 600;
+  background: #fafafa;
+}
+.standings-table td.num, .standings-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.standings-table td.team-name { font-weight: 600; }
+.standings-table tr.rank-1 td { background: #fef3c7; }
+.standings-table tr.rank-2 td { background: #f1f5f9; }
+.standings-table tr.rank-3 td { background: #fde68a55; }
+.standings-table td.dash { color: var(--ink-dim); text-align: right; }
+.standings-table .total { font-weight: 700; font-size: 16px; }
+.standings-table thead th.sport-vb { color: var(--vb); }
+.standings-table thead th.sport-hk { color: var(--hk); }
+.standings-table thead th.sport-sb { color: var(--sb); }
+
+.points-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.points-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+.points-grid label span { min-width: 32px; }
+.points-grid input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  background: var(--card);
+  color: var(--ink);
+  min-height: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.event-row:last-child { border-bottom: none; }
+.event-row .name { flex: 1; font-weight: 600; }
+.event-row .status { font-size: 12px; color: var(--ink-dim); font-weight: 600; }
+.event-row .status.complete { color: var(--good); }
+.event-row button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 36px;
+  cursor: pointer;
+}
+.event-row button.danger { color: var(--danger); border-color: #fecaca; }
+
+.add-event-btn {
+  margin-top: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  min-height: 44px;
+  color: var(--ink);
+}
+
+.event-place-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+@media (min-width: 600px) {
+  .event-place-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.event-place-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.event-place-grid label .tname { flex: 1; }
+.event-place-grid select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 40px;
+  min-width: 80px;
+}
+.event-name-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  max-width: 90vw;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-vb" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M12 2 Q 4 12 12 22" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M12 2 Q 20 12 12 22" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M2 12 Q 12 4 22 12" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    </symbol>
+    <symbol id="icon-hk" viewBox="0 0 24 24">
+      <path d="M20 3 L 10 18 L 4 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <ellipse cx="16.5" cy="20" rx="3.5" ry="1.3" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-sb" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M4 9 Q 12 14 20 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.5 2"/>
+      <path d="M4 15 Q 12 10 20 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.5 2"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header>
+  <h1>RMCC 2026 Sports Scheduler</h1>
+  <nav>
+    <button class="tab active" data-view="slot">Slot</button>
+    <button class="tab" data-view="bracket">Brackets</button>
+    <button class="tab" data-view="standings">Standings</button>
+    <button class="tab" data-view="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <div id="view-slot" class="view active"></div>
+  <div id="view-bracket" class="view"></div>
+  <div id="view-standings" class="view"></div>
+  <div id="view-settings" class="view"></div>
+</main>
+
+<div id="modal-bg" class="modal-bg">
+  <div class="modal" id="modal"></div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+"use strict";
+
+// ============================================================
+// Constants
+// ============================================================
+
+const SPORTS = ["VB", "HK", "SB"];
+const SPORT_NAMES = { VB: "Volleyball", HK: "Hockey", SB: "Softball" };
+const SPORT_CLASS = { VB: "vb", HK: "hk", SB: "sb" };
+
+const DAY_NAMES = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday" };
+
+// 30-min slots in order. Each block expands into N slots.
+const SCHEDULE_BLOCKS = [
+  { day: "Sun", times: ["1:00", "1:30", "2:00", "2:30"] },        // 4
+  { day: "Sun", times: ["3:30", "4:00", "4:30"] },                 // 3
+  { day: "Sun", times: ["6:00", "6:30", "7:00", "7:30", "8:00"] }, // 5
+  { day: "Mon", times: ["1:00", "1:30", "2:00", "2:30"] },        // 4
+  { day: "Mon", times: ["3:30", "4:00", "4:30"] },                 // 3
+  { day: "Mon", times: ["6:00", "6:30"] },                         // 2
+  { day: "Tue", times: ["6:00", "6:30"] },                         // 2
+  { day: "Wed", times: ["6:00", "6:30", "7:00", "7:30", "8:00"] }, // 5
+  { day: "Fri", times: ["1:00", "1:30", "2:00", "2:30"] },        // 4
+  { day: "Fri", times: ["3:30", "4:00"] },                         // 2
+];
+// Total: 34
+
+const BRACKET_TEMPLATE = [
+  // Winners bracket round 1 (8 teams play, seeds 5-12)
+  { id: "WB-R1-M1", kind: "WB", round: 1, seedA: 5,  seedB: 12, winnerTo: { m: "WB-R2-M1", s: "b" }, loserTo: { m: "LB-R1-M1", s: "a" } },
+  { id: "WB-R1-M2", kind: "WB", round: 1, seedA: 8,  seedB: 9,  winnerTo: { m: "WB-R2-M2", s: "b" }, loserTo: { m: "LB-R1-M1", s: "b" } },
+  { id: "WB-R1-M3", kind: "WB", round: 1, seedA: 6,  seedB: 11, winnerTo: { m: "WB-R2-M3", s: "b" }, loserTo: { m: "LB-R1-M2", s: "a" } },
+  { id: "WB-R1-M4", kind: "WB", round: 1, seedA: 7,  seedB: 10, winnerTo: { m: "WB-R2-M4", s: "b" }, loserTo: { m: "LB-R1-M2", s: "b" } },
+  // WB R2 (Quarterfinals): seeds 1-4 enter
+  { id: "WB-R2-M1", kind: "WB", round: 2, seedA: 4,  winnerTo: { m: "WB-SF-M1", s: "a" }, loserTo: { m: "LB-R2-M1", s: "b" } },
+  { id: "WB-R2-M2", kind: "WB", round: 2, seedA: 1,  winnerTo: { m: "WB-SF-M1", s: "b" }, loserTo: { m: "LB-R2-M2", s: "b" } },
+  { id: "WB-R2-M3", kind: "WB", round: 2, seedA: 3,  winnerTo: { m: "WB-SF-M2", s: "a" }, loserTo: { m: "LB-R3-M1", s: "b" } },
+  { id: "WB-R2-M4", kind: "WB", round: 2, seedA: 2,  winnerTo: { m: "WB-SF-M2", s: "b" }, loserTo: { m: "LB-R3-M2", s: "b" } },
+  // WB Semifinals
+  { id: "WB-SF-M1", kind: "WB", round: 3, winnerTo: { m: "WB-F", s: "a" }, loserTo: { m: "LB-R4-M1", s: "b" } },
+  { id: "WB-SF-M2", kind: "WB", round: 3, winnerTo: { m: "WB-F", s: "b" }, loserTo: { m: "LB-R4-M2", s: "b" } },
+  // WB Final
+  { id: "WB-F",     kind: "WB", round: 4, winnerTo: { m: "GF",   s: "a" }, loserTo: { m: "LB-F",   s: "b" } },
+  // Losers Bracket — losers drop into placement matches so every team gets a final place 1–12.
+  { id: "LB-R1-M1", kind: "LB", round: 1, winnerTo: { m: "LB-R2-M1", s: "a" }, loserTo: { m: "PL-11-12", s: "a" } },
+  { id: "LB-R1-M2", kind: "LB", round: 1, winnerTo: { m: "LB-R2-M2", s: "a" }, loserTo: { m: "PL-11-12", s: "b" } },
+  { id: "LB-R2-M1", kind: "LB", round: 2, winnerTo: { m: "LB-R3-M1", s: "a" }, loserTo: { m: "PL-9-10",  s: "a" } },
+  { id: "LB-R2-M2", kind: "LB", round: 2, winnerTo: { m: "LB-R3-M2", s: "a" }, loserTo: { m: "PL-9-10",  s: "b" } },
+  { id: "LB-R3-M1", kind: "LB", round: 3, winnerTo: { m: "LB-R4-M1", s: "a" }, loserTo: { m: "PL-7-8",   s: "a" } },
+  { id: "LB-R3-M2", kind: "LB", round: 3, winnerTo: { m: "LB-R4-M2", s: "a" }, loserTo: { m: "PL-7-8",   s: "b" } },
+  { id: "LB-R4-M1", kind: "LB", round: 4, winnerTo: { m: "LB-R5",    s: "a" }, loserTo: { m: "PL-5-6",   s: "a" } },
+  { id: "LB-R4-M2", kind: "LB", round: 4, winnerTo: { m: "LB-R5",    s: "b" }, loserTo: { m: "PL-5-6",   s: "b" } },
+  { id: "LB-R5",    kind: "LB", round: 5, winnerTo: { m: "LB-F",     s: "a" }, loserTo: "ELIM", losePlace: 4 },
+  { id: "LB-F",     kind: "LB", round: 6, winnerTo: { m: "GF",       s: "b" }, loserTo: "ELIM", losePlace: 3 },
+  // Placement matches — decide tied LB-exit pairs.
+  // Round numbers slot them right after their feeder LB round so they're ready as soon as inputs resolve.
+  { id: "PL-11-12", kind: "PL", round: 2, winnerTo: null, loserTo: "ELIM", placeWin: 11, placeLose: 12 },
+  { id: "PL-9-10",  kind: "PL", round: 3, winnerTo: null, loserTo: "ELIM", placeWin: 9,  placeLose: 10 },
+  { id: "PL-7-8",   kind: "PL", round: 4, winnerTo: null, loserTo: "ELIM", placeWin: 7,  placeLose: 8 },
+  { id: "PL-5-6",   kind: "PL", round: 5, winnerTo: null, loserTo: "ELIM", placeWin: 5,  placeLose: 6 },
+  // Grand Final (no reset)
+  { id: "GF",       kind: "GF", round: 7, winnerTo: null, loserTo: "ELIM", placeWin: 1,  placeLose: 2 },
+];
+
+const STORAGE_KEY = "rmcc2026-sports-v1";
+
+// ============================================================
+// Schedule (34 slots)
+// ============================================================
+
+function buildSlots() {
+  const slots = [];
+  let id = 0;
+  for (const block of SCHEDULE_BLOCKS) {
+    for (const time of block.times) {
+      slots.push({
+        id: id++,
+        day: block.day,
+        time,
+        label: `${block.day} ${time}`,
+        excluded: [],
+      });
+    }
+  }
+  return slots;
+}
+
+// ============================================================
+// State + persistence
+// ============================================================
+
+let state = null;
+let currentSlotId = 0;
+let currentBracketSport = "VB";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s.version !== 1) return null;
+    return s;
+  } catch (e) {
+    console.error("loadState failed", e);
+    return null;
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    showToast("Storage error — please export and reset");
+    console.error(e);
+  }
+}
+
+function defaultPointsByPlace() {
+  return [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+}
+
+function newState() {
+  const teams = [];
+  for (let i = 1; i <= 12; i++) teams.push({ id: `T${i}`, name: `Team ${i}` });
+  return {
+    version: 1,
+    teams,
+    slots: buildSlots(),
+    tournaments: {},
+    schedule: {},        // slotId -> [{slot, sport, matchId?, fillerId?, teamA, teamB, winner}]
+    sportOrderRotation: 0,
+    fillerUsage: {},     // teamId -> count
+    pointsByPlace: defaultPointsByPlace(),
+    customEvents: [],    // [{ id, name, places: { teamId: 1..12 } }]
+  };
+}
+
+// Backfill fields added in later code versions for state loaded from older saves.
+function ensureStateFields(s) {
+  if (!s.pointsByPlace || s.pointsByPlace.length !== 12) s.pointsByPlace = defaultPointsByPlace();
+  if (!Array.isArray(s.customEvents)) s.customEvents = [];
+  for (const sport of SPORTS) {
+    const t = s.tournaments && s.tournaments[sport];
+    if (!t) continue;
+    if (!t.places) t.places = {};
+    migrateTournamentPlaces(t);
+  }
+}
+
+// Derive places from completed matches for tournaments built before placement
+// games existed. For pre-placement-games state, the four LB-loser pairs get
+// the higher place each (tied), since we can't retroactively play the placement
+// games. New state with PL matches in t.matches lets the PL matches themselves
+// set clean unique places — we skip the pair logic for those.
+function migrateTournamentPlaces(t) {
+  if (!t.matches) return;
+  const m = t.matches;
+
+  // 1st / 2nd from GF
+  if (m["GF"] && m["GF"].result) {
+    t.places[m["GF"].result.winner] = 1;
+    t.places[m["GF"].result.loser] = 2;
+  }
+  // 3rd from LB-F loser
+  if (m["LB-F"] && m["LB-F"].result) {
+    t.places[m["LB-F"].result.loser] = 3;
+  }
+  // 4th from LB-R5 loser
+  if (m["LB-R5"] && m["LB-R5"].result) {
+    t.places[m["LB-R5"].result.loser] = 4;
+  }
+
+  const pairs = [
+    { round: ["LB-R4-M1", "LB-R4-M2"], pl: "PL-5-6",   place: 5 },
+    { round: ["LB-R3-M1", "LB-R3-M2"], pl: "PL-7-8",   place: 7 },
+    { round: ["LB-R2-M1", "LB-R2-M2"], pl: "PL-9-10",  place: 9 },
+    { round: ["LB-R1-M1", "LB-R1-M2"], pl: "PL-11-12", place: 11 },
+  ];
+  for (const p of pairs) {
+    // If a PL match exists for this pair, leave it alone — PL play will set places.
+    if (m[p.pl]) continue;
+    for (const mid of p.round) {
+      const rm = m[mid];
+      if (rm && rm.result) t.places[rm.result.loser] = p.place;
+    }
+  }
+}
+
+// ============================================================
+// Bracket generator
+// ============================================================
+
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildTournament(sport, seedTeamIds) {
+  const matches = {};
+  for (const tpl of BRACKET_TEMPLATE) {
+    matches[tpl.id] = {
+      id: tpl.id,
+      sport,
+      kind: tpl.kind,
+      round: tpl.round,
+      a: tpl.seedA ? seedTeamIds[tpl.seedA - 1] : null,
+      b: tpl.seedB ? seedTeamIds[tpl.seedB - 1] : null,
+      winnerTo: tpl.winnerTo,
+      loserTo: tpl.loserTo,
+      losePlace: tpl.losePlace || null,
+      placeWin: tpl.placeWin || null,
+      placeLose: tpl.placeLose || null,
+      result: null, // { winner, loser }
+    };
+  }
+  return {
+    sport,
+    seeds: seedTeamIds,
+    matches,
+    fillers: {},     // fillerId -> { id, sport, slot, teamA, teamB, winner }
+    eliminated: [],  // teamIds
+    places: {},      // teamId -> 1..12
+    champion: null,
+  };
+}
+
+function generateAllBrackets() {
+  const teamIds = state.teams.map(t => t.id);
+  for (const sport of SPORTS) {
+    const seeds = shuffled(teamIds);
+    state.tournaments[sport] = buildTournament(sport, seeds);
+  }
+}
+
+// ============================================================
+// Bracket progression
+// ============================================================
+
+function recordResult(sport, matchId, winnerTeamId) {
+  const t = state.tournaments[sport];
+  if (!t.places) t.places = {};
+  const m = t.matches[matchId];
+  if (!m || !m.a || !m.b) return;
+  const loserTeamId = m.a === winnerTeamId ? m.b : (m.b === winnerTeamId ? m.a : null);
+  if (!loserTeamId) return;
+  m.result = { winner: winnerTeamId, loser: loserTeamId };
+  // Advance winner
+  if (m.winnerTo) {
+    const tgt = t.matches[m.winnerTo.m];
+    tgt[m.winnerTo.s] = winnerTeamId;
+  } else {
+    // Terminal match (GF or PL). Record places for both teams.
+    if (m.kind === "GF") t.champion = winnerTeamId;
+    if (m.placeWin) t.places[winnerTeamId] = m.placeWin;
+    if (m.placeLose) t.places[loserTeamId] = m.placeLose;
+    // PL matches eliminate the winner too (no advancement past this).
+    if (m.kind === "PL" && !t.eliminated.includes(winnerTeamId)) t.eliminated.push(winnerTeamId);
+    if (!t.eliminated.includes(loserTeamId)) t.eliminated.push(loserTeamId);
+  }
+  // Advance loser
+  if (m.loserTo === "ELIM") {
+    if (!t.eliminated.includes(loserTeamId)) t.eliminated.push(loserTeamId);
+    if (m.losePlace) t.places[loserTeamId] = m.losePlace;
+  } else if (m.loserTo) {
+    const tgt = t.matches[m.loserTo.m];
+    tgt[m.loserTo.s] = loserTeamId;
+  }
+}
+
+// Walk downstream from a match, clearing any results and team slots that
+// depended on this match's outcome. Used when correcting a winner.
+function invalidateDownstream(sport, matchId) {
+  const t = state.tournaments[sport];
+  const m = t.matches[matchId];
+  if (!m || !m.result) return;
+  const { winner, loser } = m.result;
+
+  if (!t.places) t.places = {};
+
+  if (m.winnerTo) {
+    const tgt = t.matches[m.winnerTo.m];
+    if (tgt[m.winnerTo.s] === winner) {
+      invalidateDownstream(sport, tgt.id);
+      tgt[m.winnerTo.s] = null;
+    }
+  } else {
+    // Terminal match — clear champion / places / eliminated set
+    if (m.kind === "GF" && t.champion === winner) t.champion = null;
+    if (m.placeWin) delete t.places[winner];
+    if (m.placeLose) delete t.places[loser];
+    if (m.kind === "PL") {
+      const wi = t.eliminated.indexOf(winner);
+      if (wi >= 0) t.eliminated.splice(wi, 1);
+    }
+    const idx = t.eliminated.indexOf(loser);
+    if (idx >= 0) t.eliminated.splice(idx, 1);
+  }
+
+  if (m.loserTo === "ELIM") {
+    const idx = t.eliminated.indexOf(loser);
+    if (idx >= 0) t.eliminated.splice(idx, 1);
+    if (m.losePlace) delete t.places[loser];
+  } else if (m.loserTo) {
+    const tgt = t.matches[m.loserTo.m];
+    if (tgt[m.loserTo.s] === loser) {
+      invalidateDownstream(sport, tgt.id);
+      tgt[m.loserTo.s] = null;
+    }
+  }
+
+  m.result = null;
+
+  // Also remove any scheduled games whose match teams no longer exist
+  // (downstream matches may have been scheduled with now-null teams)
+  for (const slotId of Object.keys(state.schedule)) {
+    const games = state.schedule[slotId];
+    for (let i = games.length - 1; i >= 0; i--) {
+      const g = games[i];
+      if (g.matchId && g.sport === sport && g.matchId !== matchId) {
+        const dm = t.matches[g.matchId];
+        if (!dm.a || !dm.b) {
+          // its teams have been invalidated — drop the schedule entry
+          games.splice(i, 1);
+        }
+      }
+    }
+  }
+}
+
+// ============================================================
+// Scheduler
+// ============================================================
+
+function getScheduledMatchIds(sport) {
+  const ids = new Set();
+  for (const games of Object.values(state.schedule)) {
+    for (const g of games) {
+      if (g.matchId && g.sport === sport) ids.add(g.matchId);
+    }
+  }
+  return ids;
+}
+
+function getReadyMatches(sport) {
+  const t = state.tournaments[sport];
+  const scheduled = getScheduledMatchIds(sport);
+  return Object.values(t.matches)
+    .filter(m => m.a && m.b && !m.result && !scheduled.has(m.id))
+    .sort((x, y) => x.round - y.round || x.id.localeCompare(y.id));
+}
+
+function pickFiller(sport, slotId, playing, excluded) {
+  const t = state.tournaments[sport];
+  const allTeams = state.teams.map(x => x.id);
+  const fu = state.fillerUsage || {};
+
+  const isAvailable = (tid) => !playing.has(tid) && !excluded.has(tid);
+
+  const tier1 = t.eliminated.filter(isAvailable);
+  const tier2 = allTeams.filter(tid => isAvailable(tid) && !t.eliminated.includes(tid));
+
+  // Sort each tier by least-used as filler
+  const byLeastUsed = (a, b) => (fu[a] || 0) - (fu[b] || 0);
+  tier1.sort(byLeastUsed);
+  tier2.sort(byLeastUsed);
+
+  // Prefer eliminated (give them something to do)
+  const pool = tier1.concat(tier2);
+  if (pool.length < 2) return null;
+  const picks = [pool[0], pool[1]];
+  for (const p of picks) state.fillerUsage[p] = (state.fillerUsage[p] || 0) + 1;
+  return { teamA: picks[0], teamB: picks[1] };
+}
+
+// Returns true if any other sport already has its GF scheduled in this slot
+// across the entire schedule (not just the current results array, since we
+// schedule slots in order and earlier slots may already hold a GF).
+function isOtherSportGFInSlot(slotId, currentResults, sport) {
+  for (const g of currentResults) {
+    if (g.sport !== sport && g.matchId === "GF") return true;
+  }
+  return false;
+}
+
+// Returns true if the given sport's GF has already been scheduled in some
+// other slot anywhere in the week.
+function isSportGFScheduledElsewhere(sport, exceptSlotId) {
+  for (const sid of Object.keys(state.schedule)) {
+    if (Number(sid) === exceptSlotId) continue;
+    for (const g of state.schedule[sid]) {
+      if (g.sport === sport && g.matchId === "GF") return true;
+    }
+  }
+  return false;
+}
+
+function canPickGFForSport(slotId, currentResults, sport) {
+  if (isOtherSportGFInSlot(slotId, currentResults, sport)) return false;
+  if (isSportGFScheduledElsewhere(sport, slotId)) return false;
+  return true;
+}
+
+function scheduleSlot(slotId) {
+  const slot = state.slots[slotId];
+  const excluded = new Set(slot.excluded);
+  const playing = new Set();
+  const results = [];
+
+  // Rotate sport order for fairness so no sport always gets first pick.
+  const offset = slotId % 3;
+  const sportOrder = [...SPORTS.slice(offset), ...SPORTS.slice(0, offset)];
+
+  for (const sport of sportOrder) {
+    const ready = getReadyMatches(sport);
+    let picked = null;
+    for (const m of ready) {
+      // GF gate: Grand Final only runs in a Friday slot, and never alongside another sport's GF.
+      if (m.kind === "GF" && slot.day !== "Fri") continue;
+      if (m.kind === "GF" && !canPickGFForSport(slotId, results, sport)) continue;
+      if (excluded.has(m.a) || excluded.has(m.b)) continue;
+      if (playing.has(m.a) || playing.has(m.b)) continue;
+      picked = m;
+      break;
+    }
+    if (picked) {
+      playing.add(picked.a);
+      playing.add(picked.b);
+      results.push({
+        slot: slotId, sport,
+        matchId: picked.id,
+        teamA: picked.a, teamB: picked.b,
+        winner: null,
+      });
+    } else {
+      const filler = pickFiller(sport, slotId, playing, excluded);
+      if (filler) {
+        playing.add(filler.teamA);
+        playing.add(filler.teamB);
+        const fillerId = `${sport}-F-${slotId}-${Math.floor(Math.random() * 1e6)}`;
+        state.tournaments[sport].fillers[fillerId] = {
+          id: fillerId, sport, slot: slotId,
+          teamA: filler.teamA, teamB: filler.teamB, winner: null,
+        };
+        results.push({
+          slot: slotId, sport, fillerId,
+          teamA: filler.teamA, teamB: filler.teamB,
+          winner: null,
+        });
+      } else {
+        results.push({ slot: slotId, sport, bye: true, teamA: null, teamB: null, winner: null });
+      }
+    }
+  }
+
+  results.sort((a, b) => SPORTS.indexOf(a.sport) - SPORTS.indexOf(b.sport));
+  state.schedule[slotId] = results;
+}
+
+function ensureSlotScheduled(slotId) {
+  if (!state.schedule[slotId] || state.schedule[slotId].length === 0) {
+    scheduleSlot(slotId);
+    saveState();
+  }
+}
+
+// Manual reschedule: drop any not-yet-played games in this slot and re-pick.
+function reshuffleSlot(slotId) {
+  const games = state.schedule[slotId] || [];
+  for (const g of games) {
+    if (g.fillerId) delete state.tournaments[g.sport].fillers[g.fillerId];
+  }
+  delete state.schedule[slotId];
+  scheduleSlot(slotId);
+  saveState();
+}
+
+// ============================================================
+// Game actions
+// ============================================================
+
+function setGameWinner(slotId, sport, winnerTeamId) {
+  const games = state.schedule[slotId];
+  const game = games.find(g => g.sport === sport);
+  if (!game || game.bye) return;
+  const previous = game.winner;
+  game.winner = winnerTeamId;
+
+  if (game.matchId) {
+    const m = state.tournaments[sport].matches[game.matchId];
+    if (m.result) {
+      // Correcting an existing result — invalidate downstream first.
+      invalidateDownstream(sport, game.matchId);
+    }
+    recordResult(sport, game.matchId, winnerTeamId);
+  } else if (game.fillerId) {
+    state.tournaments[sport].fillers[game.fillerId].winner = winnerTeamId;
+  }
+  saveState();
+}
+
+function clearGameWinner(slotId, sport) {
+  const games = state.schedule[slotId];
+  const game = games.find(g => g.sport === sport);
+  if (!game) return;
+  game.winner = null;
+  if (game.matchId) {
+    invalidateDownstream(sport, game.matchId);
+  } else if (game.fillerId) {
+    state.tournaments[sport].fillers[game.fillerId].winner = null;
+  }
+  saveState();
+}
+
+function swapTeamInGame(slotId, sport, oldTeamId, newTeamId) {
+  const games = state.schedule[slotId];
+  const game = games.find(g => g.sport === sport);
+  if (!game) return false;
+  if (oldTeamId === newTeamId) return false;
+
+  // No double-booking in this slot
+  for (const g of games) {
+    if (g === game) continue;
+    if (g.teamA === newTeamId || g.teamB === newTeamId) {
+      showToast(`Team is already playing ${SPORT_NAMES[g.sport]} this slot`);
+      return false;
+    }
+  }
+  if (state.slots[slotId].excluded.includes(newTeamId)) {
+    showToast("That team is excluded from this slot");
+    return false;
+  }
+
+  // If real bracket match and it had a result, undo it first
+  if (game.matchId) {
+    const m = state.tournaments[sport].matches[game.matchId];
+    if (m.result) invalidateDownstream(sport, game.matchId);
+
+    // Downgrade to filler so the real match returns to ready queue
+    const fillerId = `${sport}-F-${slotId}-${Math.floor(Math.random() * 1e6)}`;
+    const newA = game.teamA === oldTeamId ? newTeamId : game.teamA;
+    const newB = game.teamB === oldTeamId ? newTeamId : game.teamB;
+    state.tournaments[sport].fillers[fillerId] = {
+      id: fillerId, sport, slot: slotId,
+      teamA: newA, teamB: newB, winner: null,
+    };
+    delete game.matchId;
+    game.fillerId = fillerId;
+    game.teamA = newA;
+    game.teamB = newB;
+    game.winner = null;
+  } else if (game.fillerId) {
+    const f = state.tournaments[sport].fillers[game.fillerId];
+    if (game.teamA === oldTeamId) game.teamA = newTeamId;
+    else if (game.teamB === oldTeamId) game.teamB = newTeamId;
+    f.teamA = game.teamA;
+    f.teamB = game.teamB;
+    f.winner = null;
+    game.winner = null;
+  } else {
+    return false;
+  }
+  saveState();
+  return true;
+}
+
+function toggleExclusion(slotId, teamId) {
+  const slot = state.slots[slotId];
+  const idx = slot.excluded.indexOf(teamId);
+  if (idx >= 0) slot.excluded.splice(idx, 1);
+  else slot.excluded.push(teamId);
+
+  // Reshuffle the slot since the available pool just changed.
+  // But preserve any games whose winner has already been tapped.
+  const existing = state.schedule[slotId] || [];
+  const lockedSports = new Set(existing.filter(g => g.winner).map(g => g.sport));
+  if (lockedSports.size === 0) {
+    reshuffleSlot(slotId);
+  } else {
+    // Re-pick only the sports that haven't been played yet
+    const keep = existing.filter(g => lockedSports.has(g.sport));
+    for (const g of existing) {
+      if (!lockedSports.has(g.sport) && g.fillerId) {
+        delete state.tournaments[g.sport].fillers[g.fillerId];
+      }
+    }
+    state.schedule[slotId] = keep;
+    // Re-run scheduler for missing sports
+    const playing = new Set();
+    for (const g of keep) { if (g.teamA) playing.add(g.teamA); if (g.teamB) playing.add(g.teamB); }
+    const excluded = new Set(slot.excluded);
+    for (const sport of SPORTS) {
+      if (lockedSports.has(sport)) continue;
+      const ready = getReadyMatches(sport);
+      let picked = null;
+      for (const m of ready) {
+        if (m.kind === "GF" && slot.day !== "Fri") continue;
+        if (m.kind === "GF" && !canPickGFForSport(slotId, state.schedule[slotId], sport)) continue;
+        if (excluded.has(m.a) || excluded.has(m.b)) continue;
+        if (playing.has(m.a) || playing.has(m.b)) continue;
+        picked = m;
+        break;
+      }
+      if (picked) {
+        playing.add(picked.a); playing.add(picked.b);
+        state.schedule[slotId].push({ slot: slotId, sport, matchId: picked.id, teamA: picked.a, teamB: picked.b, winner: null });
+      } else {
+        const filler = pickFiller(sport, slotId, playing, excluded);
+        if (filler) {
+          playing.add(filler.teamA); playing.add(filler.teamB);
+          const fillerId = `${sport}-F-${slotId}-${Math.floor(Math.random() * 1e6)}`;
+          state.tournaments[sport].fillers[fillerId] = { id: fillerId, sport, slot: slotId, teamA: filler.teamA, teamB: filler.teamB, winner: null };
+          state.schedule[slotId].push({ slot: slotId, sport, fillerId, teamA: filler.teamA, teamB: filler.teamB, winner: null });
+        } else {
+          state.schedule[slotId].push({ slot: slotId, sport, bye: true, teamA: null, teamB: null, winner: null });
+        }
+      }
+    }
+    state.schedule[slotId].sort((a, b) => SPORTS.indexOf(a.sport) - SPORTS.indexOf(b.sport));
+  }
+  saveState();
+}
+
+// ============================================================
+// Rendering helpers
+// ============================================================
+
+function sportIconSvg(sport, cls = "sport-icon") {
+  return `<svg class="${cls}" aria-hidden="true"><use href="#icon-${sport.toLowerCase()}"/></svg>`;
+}
+
+function teamName(teamId) {
+  if (!teamId) return "—";
+  const t = state.teams.find(x => x.id === teamId);
+  return t ? t.name : teamId;
+}
+
+function isEliminated(sport, teamId) {
+  return state.tournaments[sport].eliminated.includes(teamId);
+}
+
+function matchLabel(matchId) {
+  if (!matchId) return "";
+  const parts = matchId.split("-");
+  if (matchId === "WB-F") return "WB Final";
+  if (matchId === "LB-F") return "LB Final";
+  if (matchId === "LB-R5") return "LB Championship";
+  if (matchId === "GF") return "Grand Final";
+  if (parts[0] === "PL") return `Place ${parts[1]}${parts[2] ? "/" + parts[2] : ""}`;
+  if (parts[0] === "WB" || parts[0] === "LB") {
+    const prefix = parts[0] === "WB" ? "Winners" : "Losers";
+    const round = parts[1] === "SF" ? "Semifinal" :
+                  parts[1].startsWith("R") ? `R${parts[1].slice(1)}` :
+                  parts[1];
+    const num = parts[2] && parts[2].startsWith("M") ? ` #${parts[2].slice(1)}` : "";
+    return `${prefix} ${round}${num}`;
+  }
+  return matchId;
+}
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function openModal(html) {
+  const m = document.getElementById("modal");
+  m.innerHTML = html;
+  document.getElementById("modal-bg").classList.add("show");
+}
+function closeModal() {
+  document.getElementById("modal-bg").classList.remove("show");
+}
+document.getElementById("modal-bg").addEventListener("click", (e) => {
+  if (e.target.id === "modal-bg") closeModal();
+});
+
+// ============================================================
+// Views
+// ============================================================
+
+function render() {
+  renderSlotView();
+  renderBracketView();
+  renderStandingsView();
+  renderSettingsView();
+}
+
+function switchView(name) {
+  for (const el of document.querySelectorAll(".tab")) {
+    el.classList.toggle("active", el.dataset.view === name);
+  }
+  for (const el of document.querySelectorAll(".view")) {
+    el.classList.toggle("active", el.id === `view-${name}`);
+  }
+  if (name === "bracket") {
+    requestAnimationFrame(() => drawAllBracketLines());
+  }
+  if (name === "standings") {
+    renderStandingsView();
+  }
+}
+
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => switchView(t.dataset.view));
+});
+
+// ----- First-run view -----
+
+function renderFirstRun() {
+  const root = document.getElementById("view-slot");
+  root.innerHTML = `
+    <div class="first-run">
+      <h2>Welcome to RMCC 2026 Sports</h2>
+      <p>Click below to randomly seed all three sport brackets and start scheduling.</p>
+      <button id="btn-generate">Generate Brackets</button>
+    </div>
+  `;
+  document.getElementById("btn-generate").addEventListener("click", () => {
+    generateAllBrackets();
+    ensureSlotScheduled(0);
+    saveState();
+    currentSlotId = 0;
+    render();
+  });
+  document.getElementById("view-bracket").innerHTML = "";
+  renderSettingsView();
+}
+
+// ----- Slot view -----
+
+function renderSlotView() {
+  if (!state.tournaments.VB) { renderFirstRun(); return; }
+
+  ensureSlotScheduled(currentSlotId);
+  const slot = state.slots[currentSlotId];
+  const games = state.schedule[currentSlotId];
+
+  const root = document.getElementById("view-slot");
+  root.innerHTML = `
+    <div class="slot-header">
+      <button class="slot-nav-btn" id="prev-slot" ${currentSlotId === 0 ? "disabled" : ""}>‹</button>
+      <select class="slot-select" id="slot-select"></select>
+      <button class="slot-nav-btn" id="next-slot" ${currentSlotId === state.slots.length - 1 ? "disabled" : ""}>›</button>
+    </div>
+    <div class="excluded-bar">
+      <span class="label">Excluded this slot:</span>
+      <span id="excluded-chips"></span>
+      <button class="excl-btn" id="edit-exclusions">Edit</button>
+    </div>
+    <div class="sport-row" id="sport-row"></div>
+    <div style="margin-top: 16px; text-align: center;">
+      <button class="slot-nav-btn" id="reshuffle-btn" style="min-width: auto; padding: 0 18px; font-size: 14px; font-weight: 600;">↻ Reshuffle this slot</button>
+    </div>
+  `;
+
+  // Populate slot dropdown
+  const sel = document.getElementById("slot-select");
+  for (const s of state.slots) {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = `${s.id + 1} of ${state.slots.length} — ${DAY_NAMES[s.day]} ${s.time}`;
+    if (s.id === currentSlotId) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener("change", () => {
+    currentSlotId = Number(sel.value);
+    renderSlotView();
+  });
+
+  document.getElementById("prev-slot").addEventListener("click", () => {
+    if (currentSlotId > 0) { currentSlotId--; renderSlotView(); }
+  });
+  document.getElementById("next-slot").addEventListener("click", () => {
+    if (currentSlotId < state.slots.length - 1) { currentSlotId++; renderSlotView(); }
+  });
+  document.getElementById("edit-exclusions").addEventListener("click", openExclusionsModal);
+  document.getElementById("reshuffle-btn").addEventListener("click", () => {
+    openModal(`
+      <h2>Reshuffle this slot?</h2>
+      <div class="body">This will re-pick matchups for all sports in this slot.
+      Any winners already tapped will be cleared and removed from the bracket.</div>
+      <div class="actions">
+        <button onclick="closeModal()">Cancel</button>
+        <button class="primary" id="confirm-reshuffle">Reshuffle</button>
+      </div>
+    `);
+    document.getElementById("confirm-reshuffle").addEventListener("click", () => {
+      // Invalidate any recorded winners in this slot
+      const games = state.schedule[currentSlotId] || [];
+      for (const g of games) {
+        if (g.winner && g.matchId) invalidateDownstream(g.sport, g.matchId);
+      }
+      reshuffleSlot(currentSlotId);
+      closeModal();
+      render();
+    });
+  });
+
+  // Excluded chips
+  const chipsEl = document.getElementById("excluded-chips");
+  if (slot.excluded.length === 0) {
+    chipsEl.innerHTML = `<span style="color: var(--ink-dim); font-size: 13px;">None</span>`;
+  } else {
+    chipsEl.innerHTML = slot.excluded.map(tid =>
+      `<span class="team-chip">${teamName(tid)}</span>`
+    ).join("");
+  }
+
+  // Sport cards
+  const row = document.getElementById("sport-row");
+  for (const sport of SPORTS) {
+    const game = games.find(g => g.sport === sport);
+    row.appendChild(renderSportCard(sport, game));
+  }
+}
+
+function renderSportCard(sport, game) {
+  const div = document.createElement("div");
+  div.className = `sport-card ${SPORT_CLASS[sport]}`;
+
+  if (!game || game.bye) {
+    div.innerHTML = `
+      <div class="stripe"></div>
+      <div class="name">${sportIconSvg(sport)}${SPORT_NAMES[sport]}</div>
+      <div class="match-label bye">BYE</div>
+      <div class="bye-card">
+        <div class="big">No game</div>
+        <div>Not enough available teams</div>
+      </div>
+    `;
+    return div;
+  }
+
+  const labelText = game.matchId ? matchLabel(game.matchId) : "Filler game";
+  const labelCls = game.matchId ? "" : "filler";
+
+  const teamABtn = renderTeamButton(sport, game, "a", game.teamA);
+  const teamBBtn = renderTeamButton(sport, game, "b", game.teamB);
+
+  div.innerHTML = `
+    <div class="stripe"></div>
+    <div class="name">${sportIconSvg(sport)}${SPORT_NAMES[sport]}</div>
+    <div class="match-label ${labelCls}">${labelText}</div>
+  `;
+  div.appendChild(teamABtn);
+  const vs = document.createElement("div");
+  vs.className = "vs";
+  vs.textContent = "vs";
+  div.appendChild(vs);
+  div.appendChild(teamBBtn);
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+  actions.innerHTML = `
+    <button data-action="swapA">Swap ${teamName(game.teamA)}</button>
+    <button data-action="swapB">Swap ${teamName(game.teamB)}</button>
+    ${game.winner ? '<button data-action="clear" class="danger">Clear winner</button>' : ""}
+  `;
+  actions.querySelector('[data-action="swapA"]').addEventListener("click", () => openSwapModal(sport, game.teamA));
+  actions.querySelector('[data-action="swapB"]').addEventListener("click", () => openSwapModal(sport, game.teamB));
+  if (game.winner) {
+    actions.querySelector('[data-action="clear"]').addEventListener("click", () => {
+      clearGameWinner(currentSlotId, sport);
+      renderSlotView();
+      renderBracketView();
+      renderStandingsView();
+    });
+  }
+  div.appendChild(actions);
+  return div;
+}
+
+function renderTeamButton(sport, game, side, teamId) {
+  const btn = document.createElement("button");
+  btn.className = "team-btn";
+  const isWinner = game.winner === teamId;
+  const isLoser = game.winner && game.winner !== teamId;
+  if (isWinner) btn.classList.add("winner");
+  if (isLoser) btn.classList.add("loser");
+  if (game.matchId && isEliminated(sport, teamId)) btn.classList.add("elim-team");
+  const elimTag = !game.matchId && isEliminated(sport, teamId) ? '<span class="elim-tag">elim</span>' : "";
+  btn.innerHTML = `${teamName(teamId)}${elimTag}`;
+  btn.addEventListener("click", () => {
+    setGameWinner(currentSlotId, sport, teamId);
+    renderSlotView();
+    renderBracketView();
+    renderStandingsView();
+  });
+  return btn;
+}
+
+function openExclusionsModal() {
+  const slot = state.slots[currentSlotId];
+  const playingNow = new Set();
+  for (const g of (state.schedule[currentSlotId] || [])) {
+    if (g.winner) {
+      if (g.teamA) playingNow.add(g.teamA);
+      if (g.teamB) playingNow.add(g.teamB);
+    }
+  }
+  const grid = state.teams.map(t => {
+    const on = slot.excluded.includes(t.id);
+    const lockedPlayed = playingNow.has(t.id);
+    return `<button class="team-toggle ${on ? "on" : ""}" data-team="${t.id}" ${lockedPlayed ? "disabled" : ""}>
+      ${t.name}
+      ${lockedPlayed ? "<small>already played</small>" : ""}
+    </button>`;
+  }).join("");
+
+  openModal(`
+    <h2>Exclude teams from this slot</h2>
+    <div class="body">
+      <p style="margin: 0 0 8px 0; color: var(--ink-dim); font-size: 14px;">
+        ${DAY_NAMES[slot.day]} ${slot.time} · Tap teams that cannot play this slot.
+      </p>
+      <div class="team-toggle-grid">${grid}</div>
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="closeModal()">Done</button>
+    </div>
+  `);
+  document.querySelectorAll(".team-toggle[data-team]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      toggleExclusion(currentSlotId, btn.dataset.team);
+      renderSlotView();
+      renderBracketView();
+      renderStandingsView();
+      openExclusionsModal();
+    });
+  });
+}
+
+function openSwapModal(sport, oldTeamId) {
+  const slot = state.slots[currentSlotId];
+  const games = state.schedule[currentSlotId];
+  const otherPlaying = new Set();
+  for (const g of games) {
+    if (g.sport === sport) continue;
+    if (g.teamA) otherPlaying.add(g.teamA);
+    if (g.teamB) otherPlaying.add(g.teamB);
+  }
+  const buttons = state.teams.map(t => {
+    if (t.id === oldTeamId) return "";
+    const blocked = otherPlaying.has(t.id) || slot.excluded.includes(t.id);
+    const elim = isEliminated(sport, t.id) ? '<small>eliminated</small>' : "";
+    return `<button class="team-toggle" data-new="${t.id}" ${blocked ? "disabled" : ""}>${t.name}${elim}</button>`;
+  }).join("");
+  openModal(`
+    <h2>Swap ${teamName(oldTeamId)} in ${SPORT_NAMES[sport]}</h2>
+    <div class="body">
+      <p style="margin: 0 0 8px 0; color: var(--ink-dim); font-size: 14px;">
+        Pick a replacement. The current game becomes a filler — the original bracket match returns to the queue for a later slot.
+      </p>
+      <div class="team-toggle-grid">${buttons}</div>
+    </div>
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+  document.querySelectorAll(".team-toggle[data-new]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ok = swapTeamInGame(currentSlotId, sport, oldTeamId, btn.dataset.new);
+      if (ok) {
+        closeModal();
+        renderSlotView();
+        renderBracketView();
+        renderStandingsView();
+      }
+    });
+  });
+}
+
+// ----- Bracket view -----
+
+function renderBracketView() {
+  if (!state.tournaments.VB) { document.getElementById("view-bracket").innerHTML = ""; return; }
+  const root = document.getElementById("view-bracket");
+  root.innerHTML = `
+    <div class="bracket-tabs">
+      ${SPORTS.map(s => `<button class="bracket-tab ${currentBracketSport === s ? "active" : ""}" data-sport="${s}">${sportIconSvg(s, "sport-icon-sm")}${SPORT_NAMES[s]}</button>`).join("")}
+    </div>
+    <div id="bracket-body"></div>
+  `;
+  document.querySelectorAll(".bracket-tab").forEach(b => {
+    b.addEventListener("click", () => {
+      currentBracketSport = b.dataset.sport;
+      renderBracketView();
+    });
+  });
+  renderBracketBody(currentBracketSport);
+}
+
+function renderBracketBody(sport) {
+  const t = state.tournaments[sport];
+  const body = document.getElementById("bracket-body");
+
+  let html = "";
+  if (t.champion) {
+    html += `<div class="champion-banner">🏆 Champion: ${teamName(t.champion)}</div>`;
+  }
+
+  // Winners bracket
+  html += `<div class="bracket-section">
+    <h3>Winners Bracket</h3>
+    <div class="bracket-rounds">
+      ${renderRoundCol(t, "WB", 1, "Round 1")}
+      ${renderRoundCol(t, "WB", 2, "Quarterfinals")}
+      ${renderRoundCol(t, "WB", 3, "Semifinals")}
+      ${renderRoundCol(t, "WB", 4, "Final")}
+    </div>
+  </div>`;
+
+  html += `<div class="bracket-section">
+    <h3>Losers Bracket</h3>
+    <div class="bracket-rounds">
+      ${renderRoundCol(t, "LB", 1, "Round 1")}
+      ${renderRoundCol(t, "LB", 2, "Round 2")}
+      ${renderRoundCol(t, "LB", 3, "Round 3")}
+      ${renderRoundCol(t, "LB", 4, "Round 4")}
+      ${renderRoundCol(t, "LB", 5, "Championship")}
+      ${renderRoundCol(t, "LB", 6, "Final")}
+    </div>
+  </div>`;
+
+  const hasPL = Object.values(t.matches).some(m => m.kind === "PL");
+  if (hasPL) {
+    html += `<div class="bracket-section">
+      <h3>Placement Games</h3>
+      <div class="bracket-rounds">
+        ${renderRoundCol(t, "PL", 2, "11th / 12th")}
+        ${renderRoundCol(t, "PL", 3, "9th / 10th")}
+        ${renderRoundCol(t, "PL", 4, "7th / 8th")}
+        ${renderRoundCol(t, "PL", 5, "5th / 6th")}
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="bracket-section">
+    <h3>Grand Final</h3>
+    <div class="bracket-rounds">
+      ${renderRoundCol(t, "GF", 7, "GF")}
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+
+  attachBracketResize();
+  // Defer to next frame so layout is finalized before measuring positions.
+  requestAnimationFrame(() => drawAllBracketLines());
+}
+
+function renderRoundCol(t, kind, round, title) {
+  const matches = Object.values(t.matches).filter(m => m.kind === kind && m.round === round);
+  return `<div class="bracket-round">
+    <h4>${title}</h4>
+    ${matches.map(m => renderMatchCard(m)).join("")}
+  </div>`;
+}
+
+function drawBracketLinesForSection(section) {
+  const container = section.querySelector(".bracket-rounds");
+  if (!container) return;
+  const old = container.querySelector(".bracket-lines");
+  if (old) old.remove();
+
+  const cards = container.querySelectorAll("[data-match-id]");
+  if (cards.length < 2) return;
+
+  const cRect = container.getBoundingClientRect();
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", "bracket-lines");
+  const w = container.scrollWidth;
+  const h = container.scrollHeight;
+  svg.setAttribute("width", w);
+  svg.setAttribute("height", h);
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+  const idToCard = {};
+  cards.forEach(c => { idToCard[c.dataset.matchId] = c; });
+
+  for (const card of cards) {
+    const mid = card.dataset.matchId;
+    const tpl = BRACKET_TEMPLATE.find(t => t.id === mid);
+    if (!tpl || !tpl.winnerTo) continue;
+    const target = idToCard[tpl.winnerTo.m];
+    if (!target) continue; // cross-section edge — skip
+
+    const r1 = card.getBoundingClientRect();
+    const r2 = target.getBoundingClientRect();
+    const sl = container.scrollLeft;
+    const st = container.scrollTop;
+
+    const x1 = r1.right - cRect.left + sl;
+    const y1 = r1.top + r1.height / 2 - cRect.top + st;
+    const x2 = r2.left - cRect.left + sl;
+    const y2 = r2.top + r2.height / 2 - cRect.top + st;
+    const midX = (x1 + x2) / 2;
+
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);
+    const cls = "bracket-line" + (idToCard[mid].querySelector(".team.winner") ? " winner-decided" : "");
+    path.setAttribute("class", cls);
+    svg.appendChild(path);
+  }
+
+  container.insertBefore(svg, container.firstChild);
+}
+
+function drawAllBracketLines() {
+  document.querySelectorAll("#view-bracket .bracket-section").forEach(drawBracketLinesForSection);
+}
+
+let _bracketResizeAttached = false;
+function attachBracketResize() {
+  if (_bracketResizeAttached) return;
+  _bracketResizeAttached = true;
+  window.addEventListener("resize", () => {
+    // Debounce: avoid drawing on every resize tick
+    clearTimeout(attachBracketResize._t);
+    attachBracketResize._t = setTimeout(drawAllBracketLines, 100);
+  });
+}
+
+function renderMatchCard(m) {
+  const aCls = m.result ? (m.result.winner === m.a ? "winner" : "loser") : (m.a ? "" : "tbd");
+  const bCls = m.result ? (m.result.winner === m.b ? "winner" : "loser") : (m.b ? "" : "tbd");
+  const aName = m.a ? teamName(m.a) : "TBD";
+  const bName = m.b ? teamName(m.b) : "TBD";
+  return `<div class="bracket-match" data-match-id="${m.id}">
+    <div class="id">${m.id}</div>
+    <div class="team ${aCls}"><span>${aName}</span></div>
+    <div class="team ${bCls}"><span>${bName}</span></div>
+  </div>`;
+}
+
+// ----- Standings view -----
+
+// Count of games scheduled per team per sport (includes bracket, filler, and PL).
+function gameCountsPerSport() {
+  const counts = {};
+  for (const t of state.teams) {
+    counts[t.id] = { VB: 0, HK: 0, SB: 0, total: 0 };
+  }
+  for (const sid of Object.keys(state.schedule)) {
+    for (const g of state.schedule[sid]) {
+      if (g.bye) continue;
+      if (g.teamA && counts[g.teamA]) { counts[g.teamA][g.sport]++; counts[g.teamA].total++; }
+      if (g.teamB && counts[g.teamB]) { counts[g.teamB][g.sport]++; counts[g.teamB].total++; }
+    }
+  }
+  return counts;
+}
+
+// Convert a place map { teamId: 1..12 } to a points map { teamId: points }.
+// Ties: N teams sharing place P each get pointsByPlace[P-1]; the next N-1 places
+// are skipped (so 1, 2-tied, 4 — not 1, 2-tied, 3).
+function pointsFromPlaces(placesMap) {
+  const pts = {};
+  for (const teamId of Object.keys(placesMap || {})) {
+    const place = placesMap[teamId];
+    if (!place || place < 1 || place > 12) continue;
+    pts[teamId] = state.pointsByPlace[place - 1] || 0;
+  }
+  return pts;
+}
+
+function eventPlacesForSport(sport) {
+  const t = state.tournaments[sport];
+  if (!t) return {};
+  return t.places || {};
+}
+
+function listAllEvents() {
+  const events = [];
+  for (const sport of SPORTS) {
+    const t = state.tournaments[sport];
+    const places = eventPlacesForSport(sport);
+    const complete = t && Object.keys(places).length === 12;
+    events.push({
+      id: `bracket-${sport}`,
+      name: SPORT_NAMES[sport],
+      kind: "bracket",
+      sport,
+      places,
+      complete,
+      removable: false,
+    });
+  }
+  for (const ev of (state.customEvents || [])) {
+    const places = ev.places || {};
+    events.push({
+      id: ev.id,
+      name: ev.name,
+      kind: "custom",
+      places,
+      complete: Object.keys(places).length > 0,
+      removable: true,
+    });
+  }
+  return events;
+}
+
+function computeStandings() {
+  const events = listAllEvents();
+  const totals = {};
+  const breakdown = {};
+  for (const t of state.teams) {
+    totals[t.id] = 0;
+    breakdown[t.id] = {};
+  }
+  for (const ev of events) {
+    const pts = pointsFromPlaces(ev.places);
+    for (const t of state.teams) {
+      const p = pts[t.id] || 0;
+      breakdown[t.id][ev.id] = p;
+      totals[t.id] += p;
+    }
+  }
+  const ranked = state.teams.slice().sort((a, b) => totals[b.id] - totals[a.id]);
+  return { events, totals, breakdown, ranked };
+}
+
+function renderStandingsView() {
+  const root = document.getElementById("view-standings");
+  if (!state.tournaments.VB) {
+    root.innerHTML = `<div class="standings-section"><p>Generate brackets first to see standings.</p></div>`;
+    return;
+  }
+  try {
+    renderStandingsViewInner(root);
+  } catch (e) {
+    console.error("renderStandingsView failed", e);
+    root.innerHTML = `<div class="standings-section">
+      <h2>Standings unavailable</h2>
+      <p class="hint">Something went wrong rendering this tab. Check the browser console for details.</p>
+      <pre style="white-space: pre-wrap; font-size: 12px; color: var(--danger);">${escapeHtml(e && e.stack || String(e))}</pre>
+    </div>`;
+  }
+}
+
+function renderStandingsViewInner(root) {
+  const { events, totals, breakdown, ranked } = computeStandings();
+  const counts = gameCountsPerSport();
+
+  // ----- Standings table -----
+  let standingsRows = "";
+  ranked.forEach((team, i) => {
+    const cls = i < 3 ? `rank-${i + 1}` : "";
+    const evCells = events.map(ev => {
+      const p = breakdown[team.id][ev.id];
+      return p > 0 ? `<td class="num">${p}</td>` : `<td class="dash">—</td>`;
+    }).join("");
+    standingsRows += `<tr class="${cls}">
+      <td class="num">${i + 1}</td>
+      <td class="team-name">${team.name}</td>
+      <td class="num total">${totals[team.id]}</td>
+      ${evCells}
+    </tr>`;
+  });
+  const eventHeaders = events.map(ev => {
+    const sportCls = ev.kind === "bracket" ? `sport-${SPORT_CLASS[ev.sport]}` : "";
+    return `<th class="num ${sportCls}">${ev.name}</th>`;
+  }).join("");
+
+  // ----- Game-count grid -----
+  let gameCountRows = "";
+  for (const team of state.teams) {
+    const c = counts[team.id];
+    gameCountRows += `<tr>
+      <td class="team-name">${team.name}</td>
+      <td class="num">${c.VB}</td>
+      <td class="num">${c.HK}</td>
+      <td class="num">${c.SB}</td>
+      <td class="num total">${c.total}</td>
+    </tr>`;
+  }
+
+  // ----- Points-by-place inputs -----
+  let pointsInputs = "";
+  for (let i = 0; i < 12; i++) {
+    pointsInputs += `<label><span>${i + 1}${ordinalSuffix(i + 1)}</span>
+      <input type="number" inputmode="numeric" data-place="${i}" value="${state.pointsByPlace[i]}" />
+    </label>`;
+  }
+
+  // ----- Events list -----
+  let eventList = "";
+  for (const ev of events) {
+    const placeCount = Object.keys(ev.places).length;
+    let status, statusCls;
+    if (ev.kind === "bracket") {
+      if (placeCount === 0) { status = "Not started"; statusCls = ""; }
+      else if (placeCount === 12) { status = "Complete"; statusCls = "complete"; }
+      else { status = `${placeCount} / 12 placed`; statusCls = ""; }
+    } else {
+      status = placeCount > 0 ? `${placeCount} placed` : "Empty";
+      statusCls = placeCount > 0 ? "complete" : "";
+    }
+    eventList += `<div class="event-row">
+      <span class="name">${escapeHtml(ev.name)}</span>
+      <span class="status ${statusCls}">${status}</span>
+      ${ev.removable ? `<button data-edit-event="${ev.id}">Edit</button>
+                       <button class="danger" data-delete-event="${ev.id}">Delete</button>` : ""}
+    </div>`;
+  }
+
+  root.innerHTML = `
+    <div class="standings-section">
+      <h2>Overall Standings</h2>
+      <p class="hint">Updates live as places fill in. Top 3 highlighted.</p>
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Team</th>
+            <th class="num">Total</th>
+            ${eventHeaders}
+          </tr>
+        </thead>
+        <tbody>${standingsRows}</tbody>
+      </table>
+    </div>
+
+    <div class="standings-section">
+      <h2>Games per team</h2>
+      <p class="hint">All scheduled games per sport (bracket, placement, and filler). Watch for any team getting too many fillers.</p>
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th class="num sport-vb">Volleyball</th>
+            <th class="num sport-hk">Hockey</th>
+            <th class="num sport-sb">Softball</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>${gameCountRows}</tbody>
+      </table>
+    </div>
+
+    <div class="standings-section">
+      <h2>Points awarded per place</h2>
+      <p class="hint">Edit to change how each finishing position scores. Defaults: 12 → 1.</p>
+      <div class="points-grid">${pointsInputs}</div>
+    </div>
+
+    <div class="standings-section">
+      <h2>Events</h2>
+      <p class="hint">The three bracket sports always count. Add other competitions (e.g., relay race) and assign places manually.</p>
+      ${eventList}
+      <button class="add-event-btn" id="add-event-btn">+ Add custom event</button>
+    </div>
+  `;
+
+  // Points-by-place editing
+  root.querySelectorAll(".points-grid input[data-place]").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const idx = Number(inp.dataset.place);
+      const val = Number(inp.value);
+      if (!Number.isFinite(val)) return;
+      state.pointsByPlace[idx] = val;
+      saveState();
+      renderStandingsView();
+    });
+  });
+
+  // Custom event buttons
+  root.querySelectorAll("[data-edit-event]").forEach(btn => {
+    btn.addEventListener("click", () => openCustomEventModal(btn.dataset.editEvent));
+  });
+  root.querySelectorAll("[data-delete-event]").forEach(btn => {
+    btn.addEventListener("click", () => confirmDeleteCustomEvent(btn.dataset.deleteEvent));
+  });
+  document.getElementById("add-event-btn").addEventListener("click", () => openCustomEventModal(null));
+}
+
+function ordinalSuffix(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function openCustomEventModal(eventId) {
+  const existing = eventId ? (state.customEvents || []).find(e => e.id === eventId) : null;
+  const initialName = existing ? existing.name : "";
+  const initialPlaces = existing ? { ...existing.places } : {};
+
+  const teamRows = state.teams.map(t => {
+    const cur = initialPlaces[t.id] || "";
+    const opts = ['<option value="">—</option>']
+      .concat(Array.from({ length: 12 }, (_, i) =>
+        `<option value="${i + 1}" ${cur === i + 1 ? "selected" : ""}>${i + 1}${ordinalSuffix(i + 1)}</option>`
+      )).join("");
+    return `<label>
+      <span class="tname">${escapeHtml(t.name)}</span>
+      <select data-team="${t.id}">${opts}</select>
+    </label>`;
+  }).join("");
+
+  openModal(`
+    <h2>${existing ? "Edit event" : "Add custom event"}</h2>
+    <div class="body">
+      <input class="event-name-input" id="event-name" placeholder="Event name (e.g., Relay Race)" value="${escapeHtml(initialName)}" />
+      <p style="margin: 0 0 8px 0; color: var(--ink-dim); font-size: 13px;">Assign a place to each team. Leave blank if not participating. Ties are allowed — both teams get the same points and the next places are skipped.</p>
+      <div class="event-place-grid">${teamRows}</div>
+    </div>
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" id="save-event">${existing ? "Save" : "Add"}</button>
+    </div>
+  `);
+
+  document.getElementById("save-event").addEventListener("click", () => {
+    const name = document.getElementById("event-name").value.trim();
+    if (!name) { showToast("Event needs a name"); return; }
+    const places = {};
+    document.querySelectorAll(".event-place-grid select[data-team]").forEach(sel => {
+      const v = Number(sel.value);
+      if (v >= 1 && v <= 12) places[sel.dataset.team] = v;
+    });
+    if (existing) {
+      existing.name = name;
+      existing.places = places;
+    } else {
+      state.customEvents.push({
+        id: `ev-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`,
+        name,
+        places,
+      });
+    }
+    saveState();
+    closeModal();
+    renderStandingsView();
+  });
+}
+
+function confirmDeleteCustomEvent(eventId) {
+  const ev = (state.customEvents || []).find(e => e.id === eventId);
+  if (!ev) return;
+  openModal(`
+    <h2>Delete "${escapeHtml(ev.name)}"?</h2>
+    <div class="body">This removes the event and its points from standings.</div>
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="danger" id="confirm-delete-ev">Delete</button>
+    </div>
+  `);
+  document.getElementById("confirm-delete-ev").addEventListener("click", () => {
+    state.customEvents = state.customEvents.filter(e => e.id !== eventId);
+    saveState();
+    closeModal();
+    renderStandingsView();
+  });
+}
+
+// ----- Settings view -----
+
+function renderSettingsView() {
+  const hasBrackets = !!state.tournaments.VB;
+  document.getElementById("view-settings").innerHTML = `
+    <div class="settings-section">
+      <h2>Re-seed brackets</h2>
+      <p>Randomly re-seed all three tournaments. <strong>Wipes all results and schedule.</strong></p>
+      <button class="danger" id="reseed-btn">Re-seed all brackets</button>
+    </div>
+    <div class="settings-section">
+      <h2>Export / Import</h2>
+      <p>Back up the current state as JSON, or restore from a previous backup.</p>
+      <button id="export-btn">Export JSON</button>
+      <button id="import-btn">Import JSON</button>
+    </div>
+    <div class="settings-section">
+      <h2>Full reset</h2>
+      <p>Wipes everything — teams, brackets, schedule, results.</p>
+      <button class="danger" id="reset-btn">Full reset</button>
+    </div>
+    <div class="settings-section">
+      <h2>About</h2>
+      <p>RMCC 2026 Sports Scheduler · 12 teams · 3 double-elimination tournaments · 34 thirty-min slots Sun–Fri.</p>
+      <p>Each sport runs independent random seeding. Grand Finals are held for Friday slots.</p>
+    </div>
+  `;
+
+  document.getElementById("reseed-btn").addEventListener("click", () => {
+    openModal(`
+      <h2>Re-seed all brackets?</h2>
+      <div class="body">This wipes every recorded result and the entire schedule.</div>
+      <div class="actions">
+        <button onclick="closeModal()">Cancel</button>
+        <button class="danger" id="confirm-reseed">Re-seed</button>
+      </div>
+    `);
+    document.getElementById("confirm-reseed").addEventListener("click", () => {
+      state.schedule = {};
+      state.fillerUsage = {};
+      generateAllBrackets();
+      ensureSlotScheduled(0);
+      currentSlotId = 0;
+      saveState();
+      closeModal();
+      render();
+      switchView("slot");
+    });
+  });
+
+  document.getElementById("export-btn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    a.download = `rmcc-sports-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("import-btn").addEventListener("click", () => {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "application/json";
+    inp.addEventListener("change", () => {
+      const file = inp.files[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const imported = JSON.parse(r.result);
+          if (imported.version !== 1) throw new Error("Unknown version");
+          state = imported;
+          ensureStateFields(state);
+          currentSlotId = 0;
+          saveState();
+          render();
+          showToast("Imported");
+        } catch (e) {
+          showToast("Import failed: " + e.message);
+        }
+      };
+      r.readAsText(file);
+    });
+    inp.click();
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    openModal(`
+      <h2>Full reset?</h2>
+      <div class="body">This deletes everything. You'll be back to the welcome screen.</div>
+      <div class="actions">
+        <button onclick="closeModal()">Cancel</button>
+        <button class="danger" id="confirm-reset">Reset everything</button>
+      </div>
+    `);
+    document.getElementById("confirm-reset").addEventListener("click", () => {
+      localStorage.removeItem(STORAGE_KEY);
+      state = newState();
+      currentSlotId = 0;
+      saveState();
+      closeModal();
+      render();
+      switchView("slot");
+    });
+  });
+}
+
+// Expose for inline onclick
+window.closeModal = closeModal;
+
+// ============================================================
+// Boot
+// ============================================================
+
+const loaded = loadState();
+if (loaded) {
+  state = loaded;
+} else {
+  state = newState();
+  saveState();
+}
+ensureStateFields(state);
+render();
+</script>
+</body>
+</html>
