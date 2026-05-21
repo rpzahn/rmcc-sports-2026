@@ -6,6 +6,7 @@ A single-file iPad web app for the RMCC 2026 camp week. It runs three concurrent
 
 ### Files
 - `index.html` — the entire app (~2790 lines). Vanilla HTML/CSS/JS, no build step.
+- `apple-touch-icon.png` — 180×180 home-screen / favicon icon (dark "RM / CC" monogram).
 - `.gitignore` — excludes the schedule PDF from the git repo.
 - `2026 RMCC Daily Schedule.pdf` — local reference only, never committed.
 - `.claude/launch.json` — config for a static preview server (`python3 -m http.server 8000`).
@@ -85,7 +86,7 @@ A single-file iPad web app for the RMCC 2026 camp week. It runs three concurrent
 - **Sport-order rotation visibility**: surface which sport picks first in a contested slot.
 - **Filler game opt-out**: setting to skip filler games entirely.
 - **Print/screenshot view**: a clean printable bracket page for posting at camp.
-- **PWA manifest + icons**: proper Add-to-Home-Screen icon and splash screen.
+- **PWA manifest + splash screen**: the Add-to-Home-Screen icon is in place (`apple-touch-icon.png`, also used as the browser favicon); a full web-app manifest and a launch splash screen are still not set up.
 - **Cross-section bracket lines**: connectors stay within each bracket section; WB→LB, finals→GF, LB→PL, and the Rafting main→consolation links are not drawn.
 
 ### Known small UX gaps
