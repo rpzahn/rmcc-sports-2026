@@ -147,6 +147,7 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
 .bracket-tab[data-sport="VB"] .sport-icon-sm { color: var(--vb); }
 .bracket-tab[data-sport="HK"] .sport-icon-sm { color: var(--hk); }
 .bracket-tab[data-sport="SB"] .sport-icon-sm { color: var(--sb); }
+.bracket-tab[data-sport="RAFT"] .sport-icon-sm { color: var(--raft); }
 .bracket-tab.active .sport-icon-sm { color: white; }
 .sport-card .match-label { font-size: 12px; color: var(--ink-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
 .sport-card .match-label.filler { color: var(--warn); }
@@ -595,6 +596,11 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
       <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
       <path d="M4 9 Q 12 14 20 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.5 2"/>
       <path d="M4 15 Q 12 10 20 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.5 2"/>
+    </symbol>
+    <symbol id="icon-raft" viewBox="0 0 24 24">
+      <path d="M3 12 L 21 12 Q 12 19.5 3 12 Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M14 12 L 19 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M2.5 20.7 Q 6 19.2 9.5 20.7 Q 13 22.2 16.5 20.7 Q 20 19.2 21.5 20.7" fill="none" stroke="currentColor" stroke-width="1.4"/>
     </symbol>
   </defs>
 </svg>
@@ -1780,7 +1786,7 @@ function renderBracketView() {
   root.innerHTML = `
     <div class="bracket-tabs">
       ${SPORTS.map(s => `<button class="bracket-tab ${currentBracketSport === s ? "active" : ""}" data-sport="${s}">${sportIconSvg(s, "sport-icon-sm")}${SPORT_NAMES[s]}</button>`).join("")}
-      <button class="bracket-tab ${currentBracketSport === "RAFT" ? "active" : ""}" data-sport="RAFT">Rafting</button>
+      <button class="bracket-tab ${currentBracketSport === "RAFT" ? "active" : ""}" data-sport="RAFT">${sportIconSvg("RAFT", "sport-icon-sm")}Rafting</button>
     </div>
     <div id="bracket-body"></div>
   `;
