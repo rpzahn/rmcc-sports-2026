@@ -12,6 +12,7 @@
   --vb: #ff8a00;
   --hk: #0a84ff;
   --sb: #34c759;
+  --raft: #0d9488;
   --bg: #f4f5f7;
   --card: #ffffff;
   --ink: #111827;
@@ -288,6 +289,20 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
 .bracket-match .team.winner { background: #d1fae5; color: var(--good); }
 .bracket-match .team.loser { color: var(--ink-dim); text-decoration: line-through; }
 .bracket-match .team.tbd { color: var(--ink-dim); font-style: italic; }
+.bracket-match .team.tappable { cursor: pointer; }
+.bracket-match .team.tappable:active { background: var(--line); }
+.bracket-match .team.tappable.winner:active { background: #b8efd4; }
+.raft-clear {
+  margin-top: 4px;
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
 
 .champion-banner {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
@@ -380,6 +395,7 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
 .standings-table thead th.sport-vb { color: var(--vb); }
 .standings-table thead th.sport-hk { color: var(--hk); }
 .standings-table thead th.sport-sb { color: var(--sb); }
+.standings-table thead th.sport-raft { color: var(--raft); }
 
 .points-grid {
   display: grid;
@@ -419,6 +435,15 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
 }
 .event-row:last-child { border-bottom: none; }
 .event-row .name { flex: 1; font-weight: 600; }
+.event-row .etype {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
 .event-row .status { font-size: 12px; color: var(--ink-dim); font-weight: 600; }
 .event-row .status.complete { color: var(--good); }
 .event-row button {
@@ -483,6 +508,54 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
   margin-bottom: 8px;
   font-weight: 600;
 }
+.event-type-select {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  font-weight: 600;
+  background: var(--card);
+  color: var(--ink);
+  min-height: 48px;
+}
+.event-place-grid input.time-input {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 40px;
+  min-width: 90px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.score-row { flex-wrap: wrap; }
+.score-row .judges { display: flex; gap: 4px; align-items: center; }
+.score-row .judges input {
+  width: 48px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.score-row .judges .sum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  min-width: 44px;
+  text-align: right;
+}
+.event-place-grid.score-grid { grid-template-columns: 1fr; }
+.ed-hint { margin: 0 0 8px 0; color: var(--ink-dim); font-size: 13px; }
+.event-type-fixed { font-size: 13px; color: var(--ink-dim); font-weight: 600; margin-bottom: 8px; }
 
 .toast {
   position: fixed;
@@ -556,8 +629,8 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
 // ============================================================
 
 const SPORTS = ["VB", "HK", "SB"];
-const SPORT_NAMES = { VB: "Volleyball", HK: "Hockey", SB: "Softball" };
-const SPORT_CLASS = { VB: "vb", HK: "hk", SB: "sb" };
+const SPORT_NAMES = { VB: "Volleyball", HK: "Hockey", SB: "Softball", RAFT: "Rafting" };
+const SPORT_CLASS = { VB: "vb", HK: "hk", SB: "sb", RAFT: "raft" };
 
 const DAY_NAMES = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday" };
 
@@ -613,7 +686,39 @@ const BRACKET_TEMPLATE = [
   { id: "GF",       kind: "GF", round: 7, winnerTo: null, loserTo: "ELIM", placeWin: 1,  placeLose: 2 },
 ];
 
-const STORAGE_KEY = "rmcc2026-sports-v1";
+// Rafting — 12-team single elimination (see RMCC Rafting Bracket.pdf).
+// The main bracket reuses the proven 12-team seed layout: seeds 5-12 play
+// Round 1, seeds 1-4 bye into the quarterfinals. Losers of R1 + QF feed a
+// separate 5th/6th place bracket. Places 1-6 are decided; the remaining
+// consolation teams share places 7 / 9 (cosmetic — places 7-12 score 0).
+const RAFTING_TEMPLATE = [
+  // Main bracket — Round 1 (seeds 5-12)
+  { id: "R-R1-M1", kind: "R1", round: 1, seedA: 5, seedB: 12, winnerTo: { m: "R-QF-M1", s: "b" }, loserTo: { m: "R-C1-M1", s: "a" } },
+  { id: "R-R1-M2", kind: "R1", round: 1, seedA: 8, seedB: 9,  winnerTo: { m: "R-QF-M2", s: "b" }, loserTo: { m: "R-C1-M3", s: "a" } },
+  { id: "R-R1-M3", kind: "R1", round: 1, seedA: 6, seedB: 11, winnerTo: { m: "R-QF-M3", s: "b" }, loserTo: { m: "R-C1-M2", s: "a" } },
+  { id: "R-R1-M4", kind: "R1", round: 1, seedA: 7, seedB: 10, winnerTo: { m: "R-QF-M4", s: "b" }, loserTo: { m: "R-C1-M4", s: "a" } },
+  // Quarterfinals — seeds 1-4 enter
+  { id: "R-QF-M1", kind: "QF", round: 2, seedA: 4, winnerTo: { m: "R-SF-M1", s: "a" }, loserTo: { m: "R-C1-M4", s: "b" } },
+  { id: "R-QF-M2", kind: "QF", round: 2, seedA: 1, winnerTo: { m: "R-SF-M1", s: "b" }, loserTo: { m: "R-C1-M3", s: "b" } },
+  { id: "R-QF-M3", kind: "QF", round: 2, seedA: 3, winnerTo: { m: "R-SF-M2", s: "a" }, loserTo: { m: "R-C1-M1", s: "b" } },
+  { id: "R-QF-M4", kind: "QF", round: 2, seedA: 2, winnerTo: { m: "R-SF-M2", s: "b" }, loserTo: { m: "R-C1-M2", s: "b" } },
+  // Semifinals
+  { id: "R-SF-M1", kind: "SF", round: 3, winnerTo: { m: "R-F", s: "a" }, loserTo: { m: "R-3-4", s: "a" } },
+  { id: "R-SF-M2", kind: "SF", round: 3, winnerTo: { m: "R-F", s: "b" }, loserTo: { m: "R-3-4", s: "b" } },
+  // Final + 3rd/4th place
+  { id: "R-F",   kind: "RF",  round: 4, winnerTo: null, loserTo: null, placeWin: 1, placeLose: 2 },
+  { id: "R-3-4", kind: "R34", round: 4, winnerTo: null, loserTo: null, placeWin: 3, placeLose: 4 },
+  // 5th/6th place bracket — fed by the 8 losers of R1 + QF
+  { id: "R-C1-M1", kind: "C1", round: 1, winnerTo: { m: "R-C2-M1", s: "a" }, loserTo: "ELIM", losePlace: 9 },
+  { id: "R-C1-M2", kind: "C1", round: 1, winnerTo: { m: "R-C2-M1", s: "b" }, loserTo: "ELIM", losePlace: 9 },
+  { id: "R-C1-M3", kind: "C1", round: 1, winnerTo: { m: "R-C2-M2", s: "a" }, loserTo: "ELIM", losePlace: 9 },
+  { id: "R-C1-M4", kind: "C1", round: 1, winnerTo: { m: "R-C2-M2", s: "b" }, loserTo: "ELIM", losePlace: 9 },
+  { id: "R-C2-M1", kind: "C2", round: 2, winnerTo: { m: "R-CF", s: "a" }, loserTo: "ELIM", losePlace: 7 },
+  { id: "R-C2-M2", kind: "C2", round: 2, winnerTo: { m: "R-CF", s: "b" }, loserTo: "ELIM", losePlace: 7 },
+  { id: "R-CF",    kind: "CF", round: 3, winnerTo: null, loserTo: null, placeWin: 5, placeLose: 6 },
+];
+
+const STORAGE_KEY = "rmcc2026-sports-v2";
 
 // ============================================================
 // Schedule (34 slots)
@@ -667,7 +772,22 @@ function saveState() {
 }
 
 function defaultPointsByPlace() {
-  return [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+  return [20, 17, 14, 11, 8, 5, 0, 0, 0, 0, 0, 0];
+}
+
+// The known non-bracket camp events, pre-seeded with empty data.
+// type "places": manual 1-12 entry · "time": fastest wins · "score": 3 judges summed
+// (highest wins) · "rank": 3 rankings of 1-12 summed (lowest wins).
+function defaultCustomEvents() {
+  return [
+    { id: "evt-mixers",    name: "Mixers",         type: "rank",   ranks: {} },
+    { id: "evt-relay",     name: "Running Relay",  type: "time",   times: {} },
+    { id: "evt-climbing",  name: "Climbing Wall",  type: "time",   times: {} },
+    { id: "evt-swimming",  name: "Swimming Relay", type: "time",   times: {} },
+    { id: "evt-skits",     name: "Skits",          type: "score",  scores: {} },
+    { id: "evt-teamnames", name: "Team Names",     type: "rank",   ranks: {} },
+    { id: "evt-kitchen",   name: "Kitchen Help",   type: "places", places: {} },
+  ];
 }
 
 function newState() {
@@ -682,7 +802,7 @@ function newState() {
     sportOrderRotation: 0,
     fillerUsage: {},     // teamId -> count
     pointsByPlace: defaultPointsByPlace(),
-    customEvents: [],    // [{ id, name, places: { teamId: 1..12 } }]
+    customEvents: defaultCustomEvents(),
   };
 }
 
@@ -690,6 +810,16 @@ function newState() {
 function ensureStateFields(s) {
   if (!s.pointsByPlace || s.pointsByPlace.length !== 12) s.pointsByPlace = defaultPointsByPlace();
   if (!Array.isArray(s.customEvents)) s.customEvents = [];
+  // Pre-seed the five known events into older/empty saves.
+  if (s.customEvents.length === 0) s.customEvents = defaultCustomEvents();
+  // Every event needs a type; pre-type-field events are manual placement.
+  for (const ev of s.customEvents) {
+    if (!ev.type) ev.type = "places";
+    if (ev.type === "places" && !ev.places) ev.places = {};
+    if (ev.type === "time" && !ev.times) ev.times = {};
+    if (ev.type === "score" && !ev.scores) ev.scores = {};
+    if (ev.type === "rank" && !ev.ranks) ev.ranks = {};
+  }
   for (const sport of SPORTS) {
     const t = s.tournaments && s.tournaments[sport];
     if (!t) continue;
@@ -750,9 +880,9 @@ function shuffled(arr) {
   return a;
 }
 
-function buildTournament(sport, seedTeamIds) {
+function buildTournament(sport, seedTeamIds, template = BRACKET_TEMPLATE) {
   const matches = {};
-  for (const tpl of BRACKET_TEMPLATE) {
+  for (const tpl of template) {
     matches[tpl.id] = {
       id: tpl.id,
       sport,
@@ -779,11 +909,118 @@ function buildTournament(sport, seedTeamIds) {
   };
 }
 
-function generateAllBrackets() {
+// The four Winners-R1 pairs for a 12-length seed array, read from the template.
+function r1PairsForSeeds(seedTeamIds) {
+  const pairs = [];
+  for (const tpl of BRACKET_TEMPLATE) {
+    if (tpl.kind === "WB" && tpl.round === 1) {
+      pairs.push([seedTeamIds[tpl.seedA - 1], seedTeamIds[tpl.seedB - 1]]);
+    }
+  }
+  return pairs;
+}
+
+// Maps each bye seed (1-4) to the two seed positions that can become its R2
+// opponent — derived from the template so it stays correct if the template
+// changes. Yields { 1:[8,9], 2:[7,10], 3:[6,11], 4:[5,12] }.
+function r2OpponentSeedMap() {
+  const map = {};
+  for (const r2 of BRACKET_TEMPLATE) {
+    if (r2.kind !== "WB" || r2.round !== 2) continue;
+    // Find the WB-R1 match whose winner feeds this R2 match's "b" slot.
+    const feeder = BRACKET_TEMPLATE.find(
+      m => m.winnerTo && m.winnerTo.m === r2.id && m.winnerTo.s === "b"
+    );
+    if (feeder) map[r2.seedA] = [feeder.seedA, feeder.seedB];
+  }
+  return map;
+}
+
+function pairKey(a, b) {
+  return a < b ? a + "|" + b : b + "|" + a;
+}
+
+// Builds 3 seed arrays satisfying C1 (one bye per team) by construction,
+// C2 (unique R1 pairings) as a hard reject, and minimizing C3 (R2 rematch
+// potential). Returns { seedsBySport, hardViolation }.
+function generateConstrainedSeeds() {
   const teamIds = state.teams.map(t => t.id);
+  const r2map = r2OpponentSeedMap();
+  const MAX_TRIES = 5000;
+
+  let best = null;          // { seedsBySport, penalty } — lowest penalty passing C2
+  let c1Fallback = null;    // first C1-only candidate, used if nothing passes C2
+
+  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+    // C1: partition the 12 teams into three bye-groups of 4 → seeds 1-4 per sport.
+    const pool = shuffled(teamIds);
+    const byeGroups = {
+      VB: pool.slice(0, 4),
+      HK: pool.slice(4, 8),
+      SB: pool.slice(8, 12),
+    };
+    const seedsBySport = {};
+    for (const sport of SPORTS) {
+      const byeSet = new Set(byeGroups[sport]);
+      const byeTeams = shuffled(byeGroups[sport]);                  // seeds 1-4
+      const r1Teams = shuffled(teamIds.filter(t => !byeSet.has(t))); // seeds 5-12
+      seedsBySport[sport] = byeTeams.concat(r1Teams);
+    }
+    if (!c1Fallback) c1Fallback = seedsBySport;
+
+    // C2: the 12 R1 pairs across the sports must all be distinct.
+    const r1Seen = new Set();
+    let c2ok = true;
+    for (const sport of SPORTS) {
+      for (const [a, b] of r1PairsForSeeds(seedsBySport[sport])) {
+        const k = pairKey(a, b);
+        if (r1Seen.has(k)) { c2ok = false; break; }
+        r1Seen.add(k);
+      }
+      if (!c2ok) break;
+    }
+    if (!c2ok) continue;
+
+    // C3: count contact pairs (R1 + potential R2) appearing in 2+ sports.
+    const contactCount = {};
+    for (const sport of SPORTS) {
+      const seeds = seedsBySport[sport];
+      for (const [a, b] of r1PairsForSeeds(seeds)) {
+        const k = pairKey(a, b);
+        contactCount[k] = (contactCount[k] || 0) + 1;
+      }
+      for (const byeSeed of Object.keys(r2map)) {
+        const byeTeam = seeds[Number(byeSeed) - 1];
+        for (const oppSeed of r2map[byeSeed]) {
+          const k = pairKey(byeTeam, seeds[oppSeed - 1]);
+          contactCount[k] = (contactCount[k] || 0) + 1;
+        }
+      }
+    }
+    let penalty = 0;
+    for (const k of Object.keys(contactCount)) {
+      if (contactCount[k] > 1) penalty += contactCount[k] - 1;
+    }
+
+    if (!best || penalty < best.penalty) {
+      best = { seedsBySport, penalty };
+      if (penalty === 0) break;
+    }
+  }
+
+  if (best) return { seedsBySport: best.seedsBySport, hardViolation: false };
+  return { seedsBySport: c1Fallback, hardViolation: true };
+}
+
+function generateAllBrackets() {
+  const { seedsBySport, hardViolation } = generateConstrainedSeeds();
   for (const sport of SPORTS) {
-    const seeds = shuffled(teamIds);
-    state.tournaments[sport] = buildTournament(sport, seeds);
+    state.tournaments[sport] = buildTournament(sport, seedsBySport[sport]);
+  }
+  // Rafting is a standalone single-elim bracket — randomly seeded, not slot-scheduled.
+  state.tournaments.RAFT = buildTournament("RAFT", shuffled(state.teams.map(t => t.id)), RAFTING_TEMPLATE);
+  if (hardViolation) {
+    showToast("Seeding: a first-round matchup repeats across sports");
   }
 }
 
@@ -805,7 +1042,7 @@ function recordResult(sport, matchId, winnerTeamId) {
     tgt[m.winnerTo.s] = winnerTeamId;
   } else {
     // Terminal match (GF or PL). Record places for both teams.
-    if (m.kind === "GF") t.champion = winnerTeamId;
+    if (m.kind === "GF" || m.placeWin === 1) t.champion = winnerTeamId;
     if (m.placeWin) t.places[winnerTeamId] = m.placeWin;
     if (m.placeLose) t.places[loserTeamId] = m.placeLose;
     // PL matches eliminate the winner too (no advancement past this).
@@ -840,7 +1077,7 @@ function invalidateDownstream(sport, matchId) {
     }
   } else {
     // Terminal match — clear champion / places / eliminated set
-    if (m.kind === "GF" && t.champion === winner) t.champion = null;
+    if ((m.kind === "GF" || m.placeWin === 1) && t.champion === winner) t.champion = null;
     if (m.placeWin) delete t.places[winner];
     if (m.placeLose) delete t.places[loser];
     if (m.kind === "PL") {
@@ -908,16 +1145,23 @@ function pickFiller(sport, slotId, playing, excluded) {
   const t = state.tournaments[sport];
   const allTeams = state.teams.map(x => x.id);
   const fu = state.fillerUsage || {};
+  const counts = gameCountsPerSport();
 
   const isAvailable = (tid) => !playing.has(tid) && !excluded.has(tid);
 
   const tier1 = t.eliminated.filter(isAvailable);
   const tier2 = allTeams.filter(tid => isAvailable(tid) && !t.eliminated.includes(tid));
 
-  // Sort each tier by least-used as filler
-  const byLeastUsed = (a, b) => (fu[a] || 0) - (fu[b] || 0);
-  tier1.sort(byLeastUsed);
-  tier2.sort(byLeastUsed);
+  // Sort each tier by fewest games already scheduled in this sport (to even
+  // out per-sport totals), with filler-usage count as a tiebreaker.
+  const byFewestGames = (a, b) => {
+    const ga = counts[a] ? counts[a][sport] : 0;
+    const gb = counts[b] ? counts[b][sport] : 0;
+    if (ga !== gb) return ga - gb;
+    return (fu[a] || 0) - (fu[b] || 0);
+  };
+  tier1.sort(byFewestGames);
+  tier2.sort(byFewestGames);
 
   // Prefer eliminated (give them something to do)
   const pool = tier1.concat(tier2);
@@ -1536,6 +1780,7 @@ function renderBracketView() {
   root.innerHTML = `
     <div class="bracket-tabs">
       ${SPORTS.map(s => `<button class="bracket-tab ${currentBracketSport === s ? "active" : ""}" data-sport="${s}">${sportIconSvg(s, "sport-icon-sm")}${SPORT_NAMES[s]}</button>`).join("")}
+      <button class="bracket-tab ${currentBracketSport === "RAFT" ? "active" : ""}" data-sport="RAFT">Rafting</button>
     </div>
     <div id="bracket-body"></div>
   `;
@@ -1549,6 +1794,7 @@ function renderBracketView() {
 }
 
 function renderBracketBody(sport) {
+  if (sport === "RAFT") { renderRaftingBracket(); return; }
   const t = state.tournaments[sport];
   const body = document.getElementById("bracket-body");
 
@@ -1639,7 +1885,7 @@ function drawBracketLinesForSection(section) {
 
   for (const card of cards) {
     const mid = card.dataset.matchId;
-    const tpl = BRACKET_TEMPLATE.find(t => t.id === mid);
+    const tpl = BRACKET_TEMPLATE.find(t => t.id === mid) || RAFTING_TEMPLATE.find(t => t.id === mid);
     if (!tpl || !tpl.winnerTo) continue;
     const target = idToCard[tpl.winnerTo.m];
     if (!target) continue; // cross-section edge — skip
@@ -1692,6 +1938,111 @@ function renderMatchCard(m) {
   </div>`;
 }
 
+// ----- Rafting bracket (interactive single-elimination) -----
+
+function renderRaftingBracket() {
+  const t = state.tournaments.RAFT;
+  const body = document.getElementById("bracket-body");
+  if (!t) { body.innerHTML = ""; return; }
+
+  let html = "";
+  if (t.champion) {
+    html += `<div class="champion-banner">🏆 Champion: ${teamName(t.champion)}</div>`;
+  }
+  html += `<p class="hint">Tap a team to set the winner. Tap the other team to switch, or "Clear" to undo.</p>`;
+
+  html += `<div class="bracket-section">
+    <h3>Main Bracket</h3>
+    <div class="bracket-rounds">
+      ${renderRaftRoundCol(t, "R1", "Round 1")}
+      ${renderRaftRoundCol(t, "QF", "Quarterfinals")}
+      ${renderRaftRoundCol(t, "SF", "Semifinals")}
+      ${renderRaftRoundCol(t, "RF", "Final")}
+    </div>
+  </div>`;
+
+  html += `<div class="bracket-section">
+    <h3>3rd / 4th Place</h3>
+    <div class="bracket-rounds">
+      ${renderRaftRoundCol(t, "R34", "3rd / 4th")}
+    </div>
+  </div>`;
+
+  html += `<div class="bracket-section">
+    <h3>5th / 6th Place Bracket</h3>
+    <div class="bracket-rounds">
+      ${renderRaftRoundCol(t, "C1", "Round 1")}
+      ${renderRaftRoundCol(t, "C2", "Round 2")}
+      ${renderRaftRoundCol(t, "CF", "5th / 6th")}
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+  attachRaftingClicks();
+  attachBracketResize();
+  requestAnimationFrame(() => drawAllBracketLines());
+}
+
+function renderRaftRoundCol(t, kind, title) {
+  const matches = Object.values(t.matches).filter(m => m.kind === kind);
+  return `<div class="bracket-round">
+    <h4>${title}</h4>
+    ${matches.map(m => renderRaftMatchCard(m)).join("")}
+  </div>`;
+}
+
+function renderRaftMatchCard(m) {
+  const playable = !!(m.a && m.b);
+  const aCls = m.result ? (m.result.winner === m.a ? "winner" : "loser") : (m.a ? "" : "tbd");
+  const bCls = m.result ? (m.result.winner === m.b ? "winner" : "loser") : (m.b ? "" : "tbd");
+  const aName = m.a ? teamName(m.a) : "TBD";
+  const bName = m.b ? teamName(m.b) : "TBD";
+  const tap = playable ? " tappable" : "";
+  const aAttr = playable ? ` data-rmatch="${m.id}" data-rteam="${m.a}"` : "";
+  const bAttr = playable ? ` data-rmatch="${m.id}" data-rteam="${m.b}"` : "";
+  return `<div class="bracket-match" data-match-id="${m.id}">
+    <div class="id">${m.id}</div>
+    <div class="team ${aCls}${tap}"${aAttr}><span>${aName}</span></div>
+    <div class="team ${bCls}${tap}"${bAttr}><span>${bName}</span></div>
+    ${m.result ? `<button class="raft-clear" data-rclear="${m.id}">Clear</button>` : ""}
+  </div>`;
+}
+
+function attachRaftingClicks() {
+  document.querySelectorAll("#bracket-body .team[data-rteam]").forEach(el => {
+    el.addEventListener("click", () => setRaftingWinner(el.dataset.rmatch, el.dataset.rteam));
+  });
+  document.querySelectorAll("#bracket-body [data-rclear]").forEach(btn => {
+    btn.addEventListener("click", () => clearRaftingWinner(btn.dataset.rclear));
+  });
+}
+
+function setRaftingWinner(matchId, teamId) {
+  const t = state.tournaments.RAFT;
+  if (!t) return;
+  const m = t.matches[matchId];
+  if (!m || !m.a || !m.b) return;
+  if (m.result) {
+    if (m.result.winner === teamId) return;
+    invalidateDownstream("RAFT", matchId);
+  }
+  recordResult("RAFT", matchId, teamId);
+  saveState();
+  renderBracketView();
+  renderStandingsView();
+}
+
+function clearRaftingWinner(matchId) {
+  const t = state.tournaments.RAFT;
+  if (!t) return;
+  const m = t.matches[matchId];
+  if (!m || !m.result) return;
+  invalidateDownstream("RAFT", matchId);
+  saveState();
+  renderBracketView();
+  renderStandingsView();
+}
+
 // ----- Standings view -----
 
 // Count of games scheduled per team per sport (includes bracket, filler, and PL).
@@ -1729,9 +2080,90 @@ function eventPlacesForSport(sport) {
   return t.places || {};
 }
 
+// Parse a time string into seconds. Accepts "m:ss.s", "mm:ss", or plain
+// seconds ("83.4"). Returns a number, or null for blank/invalid input.
+function parseTime(str) {
+  if (str == null) return null;
+  const s = String(str).trim();
+  if (!s) return null;
+  if (s.includes(":")) {
+    const parts = s.split(":");
+    if (parts.length !== 2) return null;
+    const min = Number(parts[0]);
+    const sec = Number(parts[1]);
+    if (!Number.isFinite(min) || !Number.isFinite(sec)) return null;
+    return min * 60 + sec;
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Format seconds back to "m:ss.s" for display.
+function formatTime(seconds) {
+  if (seconds == null || !Number.isFinite(seconds)) return "";
+  const min = Math.floor(seconds / 60);
+  const sec = seconds - min * 60;
+  return min + ":" + (sec < 10 ? "0" : "") + sec.toFixed(1);
+}
+
+// Rank entries [{teamId, value}] into a places map. Standard-competition
+// ranking: equal values share a place, the next place is skipped (1,2,2,4).
+// ascending=true → smallest value is 1st (times); false → largest is 1st.
+function rankToPlaces(entries, ascending) {
+  const sorted = entries.slice().sort((a, b) =>
+    ascending ? a.value - b.value : b.value - a.value);
+  const places = {};
+  let place = 0, seen = 0, lastVal = null;
+  for (const e of sorted) {
+    seen++;
+    if (lastVal === null || e.value !== lastVal) { place = seen; lastVal = e.value; }
+    places[e.teamId] = place;
+  }
+  return places;
+}
+
+// Resolve any event to a { teamId: place } map, regardless of scoring type.
+function placesForEvent(ev) {
+  if (!ev) return {};
+  if (ev.type === "time") {
+    const entries = [];
+    const times = ev.times || {};
+    for (const teamId of Object.keys(times)) {
+      const v = times[teamId];
+      if (typeof v === "number" && Number.isFinite(v)) entries.push({ teamId, value: v });
+    }
+    return rankToPlaces(entries, true);
+  }
+  if (ev.type === "score") {
+    const entries = [];
+    const scores = ev.scores || {};
+    for (const teamId of Object.keys(scores)) {
+      const arr = scores[teamId];
+      if (Array.isArray(arr) && arr.length === 3 && arr.every(n => typeof n === "number" && Number.isFinite(n))) {
+        entries.push({ teamId, value: arr[0] + arr[1] + arr[2] });
+      }
+    }
+    return rankToPlaces(entries, false);
+  }
+  if (ev.type === "rank") {
+    const entries = [];
+    const ranks = ev.ranks || {};
+    for (const teamId of Object.keys(ranks)) {
+      const arr = ranks[teamId];
+      if (Array.isArray(arr) && arr.length === 3 && arr.every(n => typeof n === "number" && Number.isFinite(n))) {
+        entries.push({ teamId, value: arr[0] + arr[1] + arr[2] });
+      }
+    }
+    return rankToPlaces(entries, true);
+  }
+  // "places" (and untyped legacy events)
+  return ev.places || {};
+}
+
 function listAllEvents() {
   const events = [];
-  for (const sport of SPORTS) {
+  // The three slot-scheduled sports plus the standalone Rafting bracket.
+  for (const sport of [...SPORTS, "RAFT"]) {
     const t = state.tournaments[sport];
     const places = eventPlacesForSport(sport);
     const complete = t && Object.keys(places).length === 12;
@@ -1746,11 +2178,12 @@ function listAllEvents() {
     });
   }
   for (const ev of (state.customEvents || [])) {
-    const places = ev.places || {};
+    const places = placesForEvent(ev);
     events.push({
       id: ev.id,
       name: ev.name,
       kind: "custom",
+      type: ev.type || "places",
       places,
       complete: Object.keys(places).length > 0,
       removable: true,
@@ -1843,20 +2276,25 @@ function renderStandingsViewInner(root) {
   }
 
   // ----- Events list -----
+  const TYPE_LABEL = { places: "Placement", time: "Time-ranked", score: "Judged", rank: "Ranked" };
+  const TYPE_VERB = { places: "placed", time: "timed", score: "scored", rank: "ranked" };
   let eventList = "";
   for (const ev of events) {
     const placeCount = Object.keys(ev.places).length;
-    let status, statusCls;
+    let status, statusCls, typeLabel;
     if (ev.kind === "bracket") {
+      typeLabel = "Bracket";
       if (placeCount === 0) { status = "Not started"; statusCls = ""; }
       else if (placeCount === 12) { status = "Complete"; statusCls = "complete"; }
       else { status = `${placeCount} / 12 placed`; statusCls = ""; }
     } else {
-      status = placeCount > 0 ? `${placeCount} placed` : "Empty";
-      statusCls = placeCount > 0 ? "complete" : "";
+      typeLabel = TYPE_LABEL[ev.type] || "Placement";
+      const verb = TYPE_VERB[ev.type] || "placed";
+      status = `${placeCount} / 12 ${verb}`;
+      statusCls = placeCount === 12 ? "complete" : "";
     }
     eventList += `<div class="event-row">
-      <span class="name">${escapeHtml(ev.name)}</span>
+      <span class="name">${escapeHtml(ev.name)}<span class="etype">${typeLabel}</span></span>
       <span class="status ${statusCls}">${status}</span>
       ${ev.removable ? `<button data-edit-event="${ev.id}">Edit</button>
                        <button class="danger" data-delete-event="${ev.id}">Delete</button>` : ""}
@@ -1899,13 +2337,13 @@ function renderStandingsViewInner(root) {
 
     <div class="standings-section">
       <h2>Points awarded per place</h2>
-      <p class="hint">Edit to change how each finishing position scores. Defaults: 12 → 1.</p>
+      <p class="hint">Edit to change how each finishing position scores. Defaults: 1st 20, 2nd 17, 3rd 14, 4th 11, 5th 8, 6th 5, 7th–12th 0.</p>
       <div class="points-grid">${pointsInputs}</div>
     </div>
 
     <div class="standings-section">
       <h2>Events</h2>
-      <p class="hint">The three bracket sports always count. Add other competitions (e.g., relay race) and assign places manually.</p>
+      <p class="hint">The four brackets (Volleyball, Hockey, Softball, Rafting) and every event below count toward standings. Tap Edit on an event to enter results.</p>
       ${eventList}
       <button class="add-event-btn" id="add-event-btn">+ Add custom event</button>
     </div>
@@ -1948,13 +2386,12 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
-function openCustomEventModal(eventId) {
-  const existing = eventId ? (state.customEvents || []).find(e => e.id === eventId) : null;
-  const initialName = existing ? existing.name : "";
-  const initialPlaces = existing ? { ...existing.places } : {};
+const EVENT_TYPE_LABEL = { places: "Placement", time: "Time-ranked", score: "Judged", rank: "Ranked" };
 
-  const teamRows = state.teams.map(t => {
-    const cur = initialPlaces[t.id] || "";
+function placesEditorHtml(ev) {
+  const places = ev.places || {};
+  const rows = state.teams.map(t => {
+    const cur = places[t.id] || "";
     const opts = ['<option value="">—</option>']
       .concat(Array.from({ length: 12 }, (_, i) =>
         `<option value="${i + 1}" ${cur === i + 1 ? "selected" : ""}>${i + 1}${ordinalSuffix(i + 1)}</option>`
@@ -1964,13 +2401,205 @@ function openCustomEventModal(eventId) {
       <select data-team="${t.id}">${opts}</select>
     </label>`;
   }).join("");
+  return `<p class="ed-hint">Assign a place to each team. Leave blank if not participating. Ties are allowed — tied teams get the same points and the next place is skipped.</p>
+    <div class="event-place-grid">${rows}</div>`;
+}
+
+function timeEditorHtml(ev) {
+  const times = ev.times || {};
+  const rows = state.teams.map(t => {
+    const v = times[t.id];
+    const val = (typeof v === "number" && Number.isFinite(v)) ? formatTime(v) : "";
+    return `<label>
+      <span class="tname">${escapeHtml(t.name)}</span>
+      <input class="time-input" type="text" inputmode="decimal" data-team="${t.id}" placeholder="2:23.4" value="${val}" />
+    </label>`;
+  }).join("");
+  return `<p class="ed-hint">Enter each team's time as <strong>m:ss.s</strong> (e.g. 1:23.4) or plain seconds. Fastest time places 1st. Leave blank if not participating.</p>
+    <div class="event-place-grid">${rows}</div>`;
+}
+
+function scoreEditorHtml(ev) {
+  const scores = ev.scores || {};
+  const rows = state.teams.map(t => {
+    const arr = Array.isArray(scores[t.id]) ? scores[t.id] : [];
+    const j = i => (typeof arr[i] === "number" && Number.isFinite(arr[i])) ? arr[i] : "";
+    const allNum = arr.length === 3 && arr.every(n => typeof n === "number" && Number.isFinite(n));
+    const sum = allNum ? (arr[0] + arr[1] + arr[2]) : "—";
+    return `<label class="score-row" data-team="${t.id}">
+      <span class="tname">${escapeHtml(t.name)}</span>
+      <span class="judges">
+        <input type="number" inputmode="decimal" data-judge="0" value="${j(0)}" />
+        <input type="number" inputmode="decimal" data-judge="1" value="${j(1)}" />
+        <input type="number" inputmode="decimal" data-judge="2" value="${j(2)}" />
+        <span class="sum">${sum}</span>
+      </span>
+    </label>`;
+  }).join("");
+  return `<p class="ed-hint">Enter all three judges' scores for each team. The three are summed; the highest total places 1st.</p>
+    <div class="event-place-grid score-grid">${rows}</div>`;
+}
+
+function rankEditorHtml(ev) {
+  const ranks = ev.ranks || {};
+  const optsFor = (cur) => ['<option value="">—</option>']
+    .concat(Array.from({ length: 12 }, (_, i) =>
+      `<option value="${i + 1}" ${cur === i + 1 ? "selected" : ""}>${i + 1}</option>`
+    )).join("");
+  const rows = state.teams.map(t => {
+    const arr = Array.isArray(ranks[t.id]) ? ranks[t.id] : [];
+    const j = i => (typeof arr[i] === "number" && Number.isFinite(arr[i])) ? arr[i] : "";
+    const allNum = arr.length === 3 && arr.every(n => typeof n === "number" && Number.isFinite(n));
+    const sum = allNum ? (arr[0] + arr[1] + arr[2]) : "—";
+    return `<label class="rank-row" data-team="${t.id}">
+      <span class="tname">${escapeHtml(t.name)}</span>
+      <span class="judges">
+        <select data-judge="0">${optsFor(j(0))}</select>
+        <select data-judge="1">${optsFor(j(1))}</select>
+        <select data-judge="2">${optsFor(j(2))}</select>
+        <span class="sum">${sum}</span>
+      </span>
+    </label>`;
+  }).join("");
+  return `<p class="ed-hint">Enter all three 1–12 rankings for each team. The three are summed; the <strong>lowest</strong> total places 1st. Leave blank if not participating.</p>
+    <div class="event-place-grid score-grid">${rows}</div>`;
+}
+
+function editorHtmlFor(type, ev) {
+  if (type === "time") return timeEditorHtml(ev);
+  if (type === "score") return scoreEditorHtml(ev);
+  if (type === "rank") return rankEditorHtml(ev);
+  return placesEditorHtml(ev);
+}
+
+function attachScoreSumListeners() {
+  document.querySelectorAll(".score-row[data-team]").forEach(row => {
+    const inputs = row.querySelectorAll("input[data-judge]");
+    const sumEl = row.querySelector(".sum");
+    const update = () => {
+      let sum = 0, allNum = true;
+      inputs.forEach(inp => {
+        const s = inp.value.trim();
+        if (s === "") { allNum = false; return; }
+        const n = Number(s);
+        if (Number.isFinite(n)) sum += n; else allNum = false;
+      });
+      sumEl.textContent = allNum ? String(sum) : "—";
+    };
+    inputs.forEach(inp => inp.addEventListener("input", update));
+  });
+}
+
+function attachRankSumListeners() {
+  document.querySelectorAll(".rank-row[data-team]").forEach(row => {
+    const inputs = row.querySelectorAll("select[data-judge]");
+    const sumEl = row.querySelector(".sum");
+    const update = () => {
+      let sum = 0, allNum = true;
+      inputs.forEach(inp => {
+        const s = inp.value.trim();
+        if (s === "") { allNum = false; return; }
+        const n = Number(s);
+        if (Number.isFinite(n)) sum += n; else allNum = false;
+      });
+      sumEl.textContent = allNum ? String(sum) : "—";
+    };
+    inputs.forEach(inp => inp.addEventListener("change", update));
+  });
+}
+
+// Auto-insert the colon: once a single minute digit is typed, append ":" so
+// the user types m, then ss.s (e.g. 2 → "2:" → 2:23.4). 1-digit minutes.
+function attachTimeMask() {
+  document.querySelectorAll(".time-input[data-team]").forEach(inp => {
+    inp.addEventListener("input", (e) => {
+      let v = inp.value.replace(/[^\d:.]/g, "");
+      if (e.inputType === "insertText" && /^\d$/.test(v)) v = v + ":";
+      if (v !== inp.value) inp.value = v;
+    });
+  });
+}
+
+function mountEditor(type, ev) {
+  document.getElementById("event-editor").innerHTML = editorHtmlFor(type, ev);
+  if (type === "score") attachScoreSumListeners();
+  if (type === "rank") attachRankSumListeners();
+  if (type === "time") attachTimeMask();
+}
+
+// Reads the open editor's DOM into a data object for the given type.
+function readEditor(type) {
+  if (type === "time") {
+    const times = {};
+    document.querySelectorAll(".time-input[data-team]").forEach(inp => {
+      const sec = parseTime(inp.value);
+      if (sec != null && Number.isFinite(sec)) times[inp.dataset.team] = sec;
+    });
+    return { times };
+  }
+  if (type === "score") {
+    const scores = {};
+    document.querySelectorAll(".score-row[data-team]").forEach(row => {
+      const vals = [null, null, null];
+      let any = false;
+      row.querySelectorAll("input[data-judge]").forEach(inp => {
+        const idx = Number(inp.dataset.judge);
+        const s = inp.value.trim();
+        if (s !== "") {
+          const n = Number(s);
+          if (Number.isFinite(n)) { vals[idx] = n; any = true; }
+        }
+      });
+      if (any) scores[row.dataset.team] = vals;
+    });
+    return { scores };
+  }
+  if (type === "rank") {
+    const ranks = {};
+    document.querySelectorAll(".rank-row[data-team]").forEach(row => {
+      const vals = [null, null, null];
+      let any = false;
+      row.querySelectorAll("select[data-judge]").forEach(sel => {
+        const idx = Number(sel.dataset.judge);
+        const s = sel.value.trim();
+        if (s !== "") {
+          const n = Number(s);
+          if (Number.isFinite(n)) { vals[idx] = n; any = true; }
+        }
+      });
+      if (any) ranks[row.dataset.team] = vals;
+    });
+    return { ranks };
+  }
+  const places = {};
+  document.querySelectorAll(".event-place-grid select[data-team]").forEach(sel => {
+    const v = Number(sel.value);
+    if (v >= 1 && v <= 12) places[sel.dataset.team] = v;
+  });
+  return { places };
+}
+
+function openCustomEventModal(eventId) {
+  const existing = eventId ? (state.customEvents || []).find(e => e.id === eventId) : null;
+  const isNew = !existing;
+  const curType = existing ? (existing.type || "places") : "places";
+  const initialName = existing ? existing.name : "";
+
+  const typeControl = isNew
+    ? `<select class="event-type-select" id="event-type">
+         <option value="places">Placement — enter 1st–12th by hand</option>
+         <option value="time">Time-ranked — fastest time wins</option>
+         <option value="score">Judged — three judges' scores summed, highest wins</option>
+         <option value="rank">Ranked — three 1–12 rankings summed, lowest wins</option>
+       </select>`
+    : `<div class="event-type-fixed">${EVENT_TYPE_LABEL[curType]} event</div>`;
 
   openModal(`
     <h2>${existing ? "Edit event" : "Add custom event"}</h2>
     <div class="body">
       <input class="event-name-input" id="event-name" placeholder="Event name (e.g., Relay Race)" value="${escapeHtml(initialName)}" />
-      <p style="margin: 0 0 8px 0; color: var(--ink-dim); font-size: 13px;">Assign a place to each team. Leave blank if not participating. Ties are allowed — both teams get the same points and the next places are skipped.</p>
-      <div class="event-place-grid">${teamRows}</div>
+      ${typeControl}
+      <div id="event-editor"></div>
     </div>
     <div class="actions">
       <button onclick="closeModal()">Cancel</button>
@@ -1978,23 +2607,36 @@ function openCustomEventModal(eventId) {
     </div>
   `);
 
+  mountEditor(curType, existing || { type: curType, places: {}, times: {}, scores: {}, ranks: {} });
+
+  if (isNew) {
+    document.getElementById("event-type").addEventListener("change", (e) => {
+      mountEditor(e.target.value, { type: e.target.value, places: {}, times: {}, scores: {}, ranks: {} });
+    });
+  }
+
   document.getElementById("save-event").addEventListener("click", () => {
     const name = document.getElementById("event-name").value.trim();
     if (!name) { showToast("Event needs a name"); return; }
-    const places = {};
-    document.querySelectorAll(".event-place-grid select[data-team]").forEach(sel => {
-      const v = Number(sel.value);
-      if (v >= 1 && v <= 12) places[sel.dataset.team] = v;
-    });
+    const type = isNew ? document.getElementById("event-type").value : curType;
+    const data = readEditor(type);
     if (existing) {
       existing.name = name;
-      existing.places = places;
+      existing.type = type;
+      if (type === "places") existing.places = data.places;
+      else if (type === "time") existing.times = data.times;
+      else if (type === "score") existing.scores = data.scores;
+      else if (type === "rank") existing.ranks = data.ranks;
     } else {
-      state.customEvents.push({
+      const ev = {
         id: `ev-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`,
-        name,
-        places,
-      });
+        name, type,
+      };
+      if (type === "places") ev.places = data.places;
+      else if (type === "time") ev.times = data.times;
+      else if (type === "score") ev.scores = data.scores;
+      else if (type === "rank") ev.ranks = data.ranks;
+      state.customEvents.push(ev);
     }
     saveState();
     closeModal();
