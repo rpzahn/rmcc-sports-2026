@@ -388,9 +388,10 @@ main { padding: 12px; max-width: 1400px; margin: 0 auto; }
   color: var(--ink-dim);
   font-weight: 600;
   background: #fafafa;
+  white-space: nowrap;
 }
 .standings-table td.num, .standings-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.standings-table td.team-name { font-weight: 600; }
+.standings-table td.team-name { font-weight: 600; white-space: nowrap; }
 .standings-table tr.rank-1 td { background: #fef3c7; }
 .standings-table tr.rank-2 td { background: #f1f5f9; }
 .standings-table tr.rank-3 td { background: #fde68a55; }
@@ -2169,6 +2170,21 @@ function placesForEvent(ev) {
   return ev.places || {};
 }
 
+// Short column labels for the Overall Standings header (keeps the table narrow).
+const EVENT_SHORT = {
+  "evt-mixers": "MIXERS",
+  "evt-relay": "RELAY",
+  "evt-climbing": "CLIMB",
+  "evt-swimming": "SWIM",
+  "evt-skits": "SKITS",
+  "evt-teamnames": "NAMES",
+  "evt-kitchen": "KITCH",
+};
+function eventShortLabel(ev) {
+  if (ev.kind === "bracket") return ev.sport;  // VB / HK / SB / RAFT
+  return EVENT_SHORT[ev.id] || ev.name.trim().split(/\s+/)[0].slice(0, 6).toUpperCase();
+}
+
 function listAllEvents() {
   const events = [];
   // The three slot-scheduled sports plus the standalone Rafting bracket.
@@ -2260,7 +2276,7 @@ function renderStandingsViewInner(root) {
   });
   const eventHeaders = events.map(ev => {
     const sportCls = ev.kind === "bracket" ? `sport-${SPORT_CLASS[ev.sport]}` : "";
-    return `<th class="num ${sportCls}">${ev.name}</th>`;
+    return `<th class="num ${sportCls}">${escapeHtml(eventShortLabel(ev))}</th>`;
   }).join("");
 
   // ----- Game-count grid -----
